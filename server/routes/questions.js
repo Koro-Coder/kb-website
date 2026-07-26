@@ -1,0 +1,100 @@
+const express = require('express');
+const kbStore = require('../store/kbStore');
+const github = require('../github/client');
+const { getAdapter } = require('../parsing/adapters');
+const { parseQuestions } = require('../parsing/texTokenizer');
+
+const router = express.Router();
+
+function getToken() {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) {
+    throw new Error('GITHUB_TOKEN is not set in the environment');
+  }
+  return token;
+}
+
+function findFile(book, fileId) {
+  return (book.files || []).find((f) => f.fileId === fileId);
+}
+
+// Ordinal question list for one tex file (Q1, Q2, Q3...) — served straight
+// from the knowledge base index, no GitHub call needed.
+router.get('/books/:bookId/file', (req, res) => {
+  const { fileId } = req.query;
+  if (!fileId) {
+    res.status(400).json({ error: 'fileId query parameter is required' });
+    return;
+  }
+  try {
+    const book = kbStore.readBook(req.params.bookId);
+    const file = findFile(book, fileId);
+    if (!file) {
+      res.status(404).json({ error: `File not found: ${fileId}` });
+      return;
+    }
+    res.json({
+      fileId: file.fileId,
+      label: file.label,
+      questionCount: file.questionCount,
+      questions: file.questions,
+      warnings: file.warnings
+    });
+  } catch (error) {
+    res.status(404).json({ error: `Book not found: ${req.params.bookId}` });
+  }
+});
+
+// Full rendered question (body/options/answer) — fetched + parsed live from
+// GitHub so it always reflects the current repo content.
+router.get('/books/:bookId/question', async (req, res) => {
+  const { fileId, ordinal } = req.query;
+  if (!fileId || !ordinal) {
+    res.status(400).json({ error: 'fileId and ordinal query parameters are required' });
+    return;
+  }
+  try {
+    const book = kbStore.readBook(req.params.bookId);
+    const file = findFile(book, fileId);
+    if (!file) {
+      res.status(404).json({ error: `File not found: ${fileId}` });
+      return;
+    }
+
+    const adapter = getAdapter(book.parserProfile);
+    const { owner, name, branch, rootPath } = book.repo;
+    const fullPath = rootPath ? `${rootPath}/${file.path}` : file.path;
+    const tex = await github.getFileText(owner, name, branch, fullPath, getToken());
+
+    const { questions } = parseQuestions(tex, adapter, {
+      chapterFolder: file.chapterFolder || '',
+      imgFolder: file.imgFolder || ''
+    });
+    const question = questions.find((q) => q.ordinal === Number(ordinal));
+    if (!question) {
+      res.status(404).json({ error: `Question ordinal ${ordinal} not found in ${fileId}` });
+      return;
+    }
+
+    res.json({
+      bookId: book.bookId,
+      fileId: file.fileId,
+      ordinal: question.ordinal,
+      questionId: question.questionId,
+      questionType: question.questionType,
+      starred: question.starred,
+      year: question.year,
+      answer: question.answer,
+      marks: question.marks,
+      session: question.session,
+      commonData: question.commonData,
+      body: question.body,
+      options: question.options
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+module.exports = router;

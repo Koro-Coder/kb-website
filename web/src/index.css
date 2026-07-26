@@ -1,0 +1,208 @@
+@import 'katex/dist/katex.min.css';
+
+:root {
+  color-scheme: light dark;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #f4f5f7;
+  color: #1a1a1a;
+}
+
+.app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+header h1 {
+  font-size: 1.6rem;
+  margin: 4px 0 12px;
+}
+
+.muted {
+  color: #666;
+}
+
+.small {
+  font-size: 0.85rem;
+}
+
+.error {
+  color: #b3261e;
+  font-weight: 600;
+}
+
+.breadcrumbs {
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+button.link {
+  background: none;
+  border: none;
+  color: #2456e5;
+  padding: 0;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: inherit;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.tile {
+  display: block;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 16px;
+  text-align: left;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.tile:hover {
+  border-color: #2456e5;
+}
+
+.tile.leaf {
+  border-left: 4px solid #2456e5;
+}
+
+.question-tile {
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+.question-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 20px;
+  line-height: 1.7;
+}
+
+.question-meta {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.question-body {
+  margin-bottom: 16px;
+}
+
+.common-data {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.common-data-label {
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #4338ca;
+  margin-bottom: 6px;
+}
+
+.question-image {
+  display: block;
+  max-width: 60%;
+  height: auto;
+  margin: 12px 0;
+  border-radius: 6px;
+}
+
+/* Wide tables (truth tables especially) scroll inside their own box rather
+   than forcing the whole question card to scroll sideways. */
+.table-scroll {
+  overflow-x: auto;
+  margin: 14px 0;
+}
+
+.question-table {
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.question-table td {
+  border: 1px solid #c9ccd4;
+  padding: 6px 12px;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.option {
+  padding: 10px 12px;
+  background: #f7f8fa;
+  border-radius: 8px;
+}
+
+.option-image {
+  display: inline-block;
+  max-width: 30%;
+  vertical-align: middle;
+  border-radius: 4px;
+  margin: 4px 0;
+}
+
+.answer {
+  margin-top: 20px;
+  font-size: 0.95rem;
+}
+
+.answer summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #2456e5;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #16181d;
+    color: #e6e6e6;
+  }
+  .tile,
+  .question-card {
+    background: #1f222a;
+    border-color: #2c2f38;
+  }
+  .option {
+    background: #262933;
+  }
+  .question-table td {
+    border-color: #3a3d47;
+  }
+  .common-data {
+    background: #1e2340;
+    border-color: #3730a3;
+  }
+  .common-data-label {
+    color: #a5b4fc;
+  }
+  .question-meta {
+    color: #aaa;
+  }
+}

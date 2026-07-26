@@ -1,0 +1,16 @@
+{
+  "name": "kb-website",
+  "version": "1.0.0",
+  "description": "PrepFusion question viewer: browse Aptitude/Maths/Technical books and render LaTeX questions",
+  "main": "server/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node --env-file=.env server/index.js",
+    "dev": "node --env-file=.env --watch server/index.js",
+    "test": "node --test server/**/*.test.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
