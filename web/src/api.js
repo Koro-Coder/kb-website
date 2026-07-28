@@ -25,3 +25,9 @@ export function getQuestion(bookId, fileId, ordinal) {
 export function assetUrl(bookId, src) {
   return `/assets/${bookId}/${src}`;
 }
+
+// Solution figures come from the solutions repo, which is a separate repo
+// from the questions — see the /assets/solution route.
+export function solutionAssetUrl(bookId, src) {
+  return `/assets/solution/${bookId}/${src}`;
+}

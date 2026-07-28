@@ -2,7 +2,7 @@ const express = require('express');
 const kbStore = require('../store/kbStore');
 const github = require('../github/client');
 const { getAdapter } = require('../parsing/adapters');
-const { parseQuestions } = require('../parsing/texTokenizer');
+const { parseQuestions, parseSolutions } = require('../parsing/texTokenizer');
 
 const router = express.Router();
 
@@ -76,7 +76,32 @@ router.get('/books/:bookId/question', async (req, res) => {
       return;
     }
 
+    // Solutions live in a mirrored repo, joined on (file, question number) —
+    // the printed Q-id is not unique per book for Aptitude, whose ids omit the
+    // session. A missing/unreadable solution is never fatal: the question
+    // still renders, just without a solution below it.
+    let solution = null;
+    if (book.solutionRepo && file.solutionPath) {
+      try {
+        const sr = book.solutionRepo;
+        const solFullPath = sr.rootPath ? `${sr.rootPath}/${file.solutionPath}` : file.solutionPath;
+        const solTex = await github.getFileText(sr.owner, sr.name, sr.branch, solFullPath, getToken());
+        const { solutions } = parseSolutions(solTex, adapter, {
+          chapterFolder: file.chapterFolder || '',
+          imgFolder: file.imgFolder || ''
+        });
+        // Must match on BOTH year and question number: a chapter file spans
+        // many years and restarts numbering each year, so questionNum alone
+        // is ambiguous (2021 Q1, 2025 Q1, ... all collide).
+        solution =
+          solutions.find((s) => s.questionNum === question.questionNum && s.year === question.year) || null;
+      } catch (error) {
+        console.error(`Solution lookup failed for ${fileId}#${ordinal}:`, error.message);
+      }
+    }
+
     res.json({
+      solution,
       bookId: book.bookId,
       fileId: file.fileId,
       ordinal: question.ordinal,

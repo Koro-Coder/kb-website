@@ -1,5 +1,5 @@
 import MathSpan from './MathSpan.jsx';
-import { assetUrl } from '../api.js';
+import { assetUrl, solutionAssetUrl } from '../api.js';
 
 const IMAGE_MACRO = /\\QuestionFigure(?:NoNumber)?(?:\[[^\]]*\])?\{[^{}]+\}/g;
 const MATH_PATTERN = /\$\$([\s\S]*?)\$\$|\$([^$]*?)\$/g;
@@ -61,7 +61,9 @@ function renderOptionValue(value, images, bookId, keyPrefix) {
 
 const OPTION_LABELS = 'ABCDEFGH';
 
-function renderBodyNodes(body, bookId, keyPrefix) {
+// `urlFor` decides which repo images resolve against — question figures come
+// from the question repo, solution figures from the solutions repo.
+function renderBodyNodes(body, bookId, keyPrefix, urlFor = assetUrl) {
   return (body || []).map((node, idx) => {
     if (node.type === 'text') {
       return <span key={`${keyPrefix}${idx}`}>{renderInlineText(node.value, `${keyPrefix}${idx}`)} </span>;
@@ -74,9 +76,38 @@ function renderBodyNodes(body, bookId, keyPrefix) {
         <img
           key={`${keyPrefix}${idx}`}
           className="question-image"
-          src={assetUrl(bookId, node.src)}
+          src={urlFor(bookId, node.src)}
           alt="question"
         />
+      );
+    }
+    if (node.type === 'list') {
+      const Tag = node.ordered ? 'ol' : 'ul';
+      return (
+        <Tag className="body-list" key={`${keyPrefix}${idx}`}>
+          {node.items.map((item, n) => (
+            // A custom \item[(I)] marker replaces the bullet rather than
+            // sitting alongside it, matching how LaTeX renders it.
+            <li key={n} className={item.label ? 'labelled' : undefined}>
+              {item.label && <span className="item-label">{item.label}</span>}
+              {renderBodyNodes(item.content, bookId, `${keyPrefix}${idx}-${n}-`, urlFor)}
+            </li>
+          ))}
+        </Tag>
+      );
+    }
+    if (node.type === 'method' || node.type === 'keypoints' || node.type === 'mistakes') {
+      const heading =
+        node.type === 'method'
+          ? `Method ${node.label}`
+          : node.type === 'keypoints'
+            ? 'Key Points'
+            : 'Mistakes to Avoid';
+      return (
+        <div className={`sol-block sol-${node.type}`} key={`${keyPrefix}${idx}`}>
+          <div className="sol-block-title">{heading}</div>
+          {renderBodyNodes(node.content, bookId, `${keyPrefix}${idx}-`, urlFor)}
+        </div>
       );
     }
     if (node.type === 'table') {
@@ -90,7 +121,7 @@ function renderBodyNodes(body, bookId, keyPrefix) {
                 <tr key={r}>
                   {row.map((cell, c) => (
                     <td key={c} colSpan={cell.colspan > 1 ? cell.colspan : undefined}>
-                      {renderBodyNodes(cell.content, bookId, `${keyPrefix}${idx}-${r}-${c}-`)}
+                      {renderBodyNodes(cell.content, bookId, `${keyPrefix}${idx}-${r}-${c}-`, urlFor)}
                     </td>
                   ))}
                 </tr>
@@ -142,6 +173,35 @@ export default function QuestionViewer({ bookId, question }) {
           <div>{renderInlineText(String(question.answer), 'ans')}</div>
         </details>
       )}
+
+      {question.solution && <SolutionSection bookId={bookId} solution={question.solution} />}
     </div>
+  );
+}
+
+const DIFFICULTY_LABELS = { 1: 'Easy', 2: 'Medium', 3: 'Hard' };
+
+function SolutionSection({ bookId, solution }) {
+  const level = Number(solution.difficulty);
+  return (
+    // Collapsed by default so the question can be attempted before the
+    // solution is visible.
+    <details className="solution">
+      <summary>Show solution</summary>
+      <div className="solution-meta">
+        {Number.isFinite(level) && level > 0 && (
+          <span className="difficulty" title={DIFFICULTY_LABELS[level] || ''}>
+            {'●'.repeat(level)}
+            {'○'.repeat(Math.max(0, 3 - level))} {DIFFICULTY_LABELS[level] || ''}
+          </span>
+        )}
+        {solution.video && (
+          <a className="video-link" href={solution.video} target="_blank" rel="noopener noreferrer">
+            Watch video solution
+          </a>
+        )}
+      </div>
+      <div className="solution-body">{renderBodyNodes(solution.body, bookId, 'sol', solutionAssetUrl)}</div>
+    </details>
   );
 }
