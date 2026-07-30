@@ -3,6 +3,7 @@ const kbStore = require('../store/kbStore');
 const github = require('../github/client');
 const { getAdapter } = require('../parsing/adapters');
 const { parseQuestions, parseSolutions } = require('../parsing/texTokenizer');
+const videoStore = require('../store/videoStore');
 
 const router = express.Router();
 
@@ -95,6 +96,21 @@ router.get('/books/:bookId/question', async (req, res) => {
         // is ambiguous (2021 Q1, 2025 Q1, ... all collide).
         solution =
           solutions.find((s) => s.questionNum === question.questionNum && s.year === question.year) || null;
+
+        // A curated link (uploaded via the video CSV) wins over whatever the
+        // LaTeX source carries, so videos can be added without editing the
+        // solution repo.
+        if (solution) {
+          const override = videoStore.getVideo(
+            req.params.bookId,
+            file.fileId,
+            question.year,
+            question.questionNum
+          );
+          if (override) {
+            solution.video = override;
+          }
+        }
       } catch (error) {
         console.error(`Solution lookup failed for ${fileId}#${ordinal}:`, error.message);
       }

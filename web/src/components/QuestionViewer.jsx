@@ -181,8 +181,46 @@ export default function QuestionViewer({ bookId, question }) {
 
 const DIFFICULTY_LABELS = { 1: 'Easy', 2: 'Medium', 3: 'Hard' };
 
+// Accepts the forms authors actually write — youtu.be/ID, watch?v=ID,
+// /embed/ID, /shorts/ID, /live/ID — and returns a privacy-mode embed URL,
+// preserving a start time if one was given. Returns null for anything that
+// isn't recognisably a YouTube video, so we never drop an arbitrary URL into
+// an iframe.
+function toYouTubeEmbed(rawUrl) {
+  let parsed;
+  try {
+    parsed = new URL(String(rawUrl).trim());
+  } catch (error) {
+    return null;
+  }
+
+  const host = parsed.hostname.toLowerCase().replace(/^www\.|^m\./, '');
+  let id = null;
+
+  if (host === 'youtu.be') {
+    id = parsed.pathname.slice(1).split('/')[0];
+  } else if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+    if (parsed.pathname === '/watch') {
+      id = parsed.searchParams.get('v');
+    } else {
+      const match = /^\/(embed|shorts|live|v)\/([^/?#]+)/.exec(parsed.pathname);
+      id = match ? match[2] : null;
+    }
+  }
+
+  if (!id || !/^[\w-]{6,20}$/.test(id)) {
+    return null;
+  }
+
+  const start = parsed.searchParams.get('t') || parsed.searchParams.get('start');
+  const seconds = start ? String(start).replace(/[^\d]/g, '') : '';
+  const query = seconds ? `?start=${seconds}` : '';
+  return `https://www.youtube-nocookie.com/embed/${id}${query}`;
+}
+
 function SolutionSection({ bookId, solution }) {
   const level = Number(solution.difficulty);
+  const embedUrl = solution.video ? toYouTubeEmbed(solution.video) : null;
   return (
     // Collapsed by default so the question can be attempted before the
     // solution is visible.
@@ -195,12 +233,28 @@ function SolutionSection({ bookId, solution }) {
             {'○'.repeat(Math.max(0, 3 - level))} {DIFFICULTY_LABELS[level] || ''}
           </span>
         )}
-        {solution.video && (
+        {solution.video && !embedUrl && (
           <a className="video-link" href={solution.video} target="_blank" rel="noopener noreferrer">
             Watch video solution
           </a>
         )}
       </div>
+
+      {embedUrl && (
+        // Inside a closed <details> the iframe isn't rendered at all, so the
+        // YouTube player only loads once the solution is actually opened.
+        <div className="video-embed">
+          <iframe
+            src={embedUrl}
+            title="Video solution"
+            loading="lazy"
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen
+          />
+        </div>
+      )}
+
       <div className="solution-body">{renderBodyNodes(solution.body, bookId, 'sol', solutionAssetUrl)}</div>
     </details>
   );

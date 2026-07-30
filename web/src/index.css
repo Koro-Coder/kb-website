@@ -224,6 +224,27 @@ button.link {
   text-decoration: underline;
 }
 
+/* 16:9 responsive frame — the player scales with the column instead of
+   forcing a fixed width on narrow screens. */
+.video-embed {
+  position: relative;
+  width: 100%;
+  max-width: 680px;
+  aspect-ratio: 16 / 9;
+  margin: 0 0 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+}
+
+.video-embed iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
 .solution-body {
   line-height: 1.7;
 }
