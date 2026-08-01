@@ -138,6 +138,72 @@ button.link {
   cursor: default;
 }
 
+/* Display math ($$…$$, \[…\]) is a block of its own, centred, with room to
+   breathe — and scrollable so a wide derivation cannot stretch the page. */
+.math-display {
+  display: block;
+  margin: 12px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+}
+
+/* KaTeX puts \tag{} in a right-aligned column; keep it from being clipped. */
+.math-display .katex-display {
+  margin: 0;
+}
+
+/* --- Previous / next within a chapter ------------------------------------ */
+
+.question-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+/* Holds the slot open at the first and last question, so the counter stays
+   centred instead of jumping sideways. */
+.nav-spacer {
+  flex: 0 0 auto;
+  width: 1px;
+}
+
+.nav-btn {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2456e5;
+  cursor: pointer;
+}
+
+.nav-btn:hover {
+  border-color: #2456e5;
+}
+
+.nav-hint {
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.nav-position {
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .nav-hint {
+    display: none;
+  }
+}
+
 /* --- Report / request actions -------------------------------------------- */
 
 .question-actions {

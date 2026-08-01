@@ -4,12 +4,22 @@ import QuestionActions from './QuestionActions.jsx';
 import { assetUrl, solutionAssetUrl } from '../api.js';
 
 const IMAGE_MACRO = /\\QuestionFigure(?:NoNumber)?(?:\[[^\]]*\])?\{[^{}]+\}/g;
-const MATH_PATTERN = /\$\$([\s\S]*?)\$\$|\$([^$]*?)\$/g;
+// The (?<!\\) guards make an escaped \$ — LaTeX for a literal dollar sign —
+// ineligible as a delimiter. Without them, prose like "costs \$5 to \$10"
+// would have its middle swallowed and rendered as maths.
+const MATH_PATTERN = /(?<!\\)\$\$([\s\S]*?)(?<!\\)\$\$|(?<!\\)\$([^$]*?)(?<!\\)\$/g;
 
-// Options are stored as raw LaTeX (not pre-tokenized like question body), so
-// they still need inline $...$ math parsing + image-macro stripping here —
-// mirrors what the old Latex Parser's server.js did server-side, just moved
-// client-side now that rendering is React's job.
+// A literal dollar reaches us as \$ (still escaped, from raw LaTeX) or as a
+// bare $ (the tokenizer unescapes it in body text). Only the former needs
+// unescaping for display.
+function unescapeDollars(text) {
+  return text.replace(/\\\$/g, '$');
+}
+
+// Options and \item[...] labels are stored as raw LaTeX (not pre-tokenized
+// like the question body), so they still need inline $...$ math parsing +
+// image-macro stripping here — mirrors what the old Latex Parser's server.js
+// did server-side, just moved client-side now that rendering is React's job.
 function renderInlineText(text, keyPrefix) {
   const nodes = [];
   let pos = 0;
@@ -18,15 +28,19 @@ function renderInlineText(text, keyPrefix) {
   const pattern = new RegExp(MATH_PATTERN.source, 'g');
   while ((match = pattern.exec(text)) !== null) {
     if (match.index > pos) {
-      nodes.push(<span key={`${keyPrefix}-t${idx}`}>{text.slice(pos, match.index)}</span>);
+      nodes.push(
+        <span key={`${keyPrefix}-t${idx}`}>{unescapeDollars(text.slice(pos, match.index))}</span>
+      );
     }
+    // match[1] is the $$...$$ capture, match[2] the $...$ one — so the
+    // delimiter tells us display vs inline here too.
     const expr = match[1] ?? match[2];
-    nodes.push(<MathSpan key={`${keyPrefix}-m${idx}`} expr={expr} />);
+    nodes.push(<MathSpan key={`${keyPrefix}-m${idx}`} expr={expr} display={match[1] !== undefined} />);
     pos = match.index + match[0].length;
     idx += 1;
   }
   if (pos < text.length) {
-    nodes.push(<span key={`${keyPrefix}-tail`}>{text.slice(pos)}</span>);
+    nodes.push(<span key={`${keyPrefix}-tail`}>{unescapeDollars(text.slice(pos))}</span>);
   }
   return nodes;
 }
@@ -71,7 +85,7 @@ function renderBodyNodes(body, bookId, keyPrefix, urlFor = assetUrl) {
       return <span key={`${keyPrefix}${idx}`}>{renderInlineText(node.value, `${keyPrefix}${idx}`)} </span>;
     }
     if (node.type === 'math') {
-      return <MathSpan key={`${keyPrefix}${idx}`} expr={node.value} />;
+      return <MathSpan key={`${keyPrefix}${idx}`} expr={node.value} display={node.display} />;
     }
     if (node.type === 'image') {
       return (
@@ -91,7 +105,14 @@ function renderBodyNodes(body, bookId, keyPrefix, urlFor = assetUrl) {
             // A custom \item[(I)] marker replaces the bullet rather than
             // sitting alongside it, matching how LaTeX renders it.
             <li key={n} className={item.label ? 'labelled' : undefined}>
-              {item.label && <span className="item-label">{item.label}</span>}
+              {/* The marker is raw LaTeX like "$P$." — matching exercises label
+                  their rows with maths — so it needs the same inline pass the
+                  item's content gets, or the dollars render literally. */}
+              {item.label && (
+                <span className="item-label">
+                  {renderInlineText(item.label, `${keyPrefix}${idx}-${n}-label`)}
+                </span>
+              )}
               {renderBodyNodes(item.content, bookId, `${keyPrefix}${idx}-${n}-`, urlFor)}
             </li>
           ))}

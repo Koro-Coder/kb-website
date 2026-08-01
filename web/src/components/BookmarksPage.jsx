@@ -175,16 +175,17 @@ export default function BookmarksPage() {
                   .sort((a, b) => a.year - b.year || a.questionNum - b.questionNum)
                   .map((bookmark) => {
                     const href = questionHref(bookmark, placement);
+                    // The question id already encodes chapter.year.number
+                    // (7.15.1 = chapter 7, 2015, Q1), so repeating the year and
+                    // number beside it says the same thing twice. Only the
+                    // fallback, used when no id was captured, still needs them
+                    // to identify the question within its chapter.
                     const title = bookmark.questionId
                       ? `Q${bookmark.questionId}`
-                      : `Q${bookmark.questionNum}`;
+                      : `Q${bookmark.questionNum} · ${bookmark.year}`;
                     return (
                       <li key={bookmark.id}>
                         {href ? <Link to={href}>{title}</Link> : <span>{title}</span>}
-                        <span className="muted small">
-                          {' '}
-                          {bookmark.year} · Q{bookmark.questionNum}
-                        </span>
                         <button className="link remove" onClick={() => drop(bookmark.id)}>
                           Remove
                         </button>

@@ -110,7 +110,7 @@ function createBookmarkStore() {
     async list(userId) {
       const bookmarks = await collection(COLLECTIONS.bookmarks);
       const rows = await bookmarks.find({ userId }).sort({ createdAt: -1 }).toArray();
-      return rows.map(toBookmark);
+      return rows.map(withId);
     },
 
     async add(bookmark) {
@@ -139,7 +139,7 @@ function createReportStore() {
     async listForUser(userId) {
       const reports = await collection(COLLECTIONS.reports);
       const rows = await reports.find({ userId }).sort({ createdAt: -1 }).toArray();
-      return rows.map(toBookmark);
+      return rows.map(withId);
     },
 
     async get(userId, id) {

@@ -4,6 +4,7 @@ import { getSubjects, getSubjectTree, getFileQuestions, getQuestion } from './ap
 import TreeBrowser from './components/TreeBrowser.jsx';
 import QuestionGrid from './components/QuestionGrid.jsx';
 import QuestionViewer from './components/QuestionViewer.jsx';
+import QuestionNav from './components/QuestionNav.jsx';
 import AccountBar from './components/AccountBar.jsx';
 import BookmarksPage from './components/BookmarksPage.jsx';
 
@@ -111,6 +112,9 @@ function SubjectBrowser() {
 
   const handleSelectQuestion = (ord) => {
     updateParams({ ordinal: ord });
+    // Moving through a series lands you mid-page otherwise, since the previous
+    // question may have been long.
+    window.scrollTo({ top: 0 });
   };
 
   const showingQuestion = Boolean(bookId && fileId && ordinal);
@@ -159,6 +163,13 @@ function SubjectBrowser() {
           {questionError && <p className="error">{questionError}</p>}
           {!questionError && !question && <p className="muted">Loading…</p>}
           {question && <QuestionViewer bookId={bookId} subject={subject} question={question} />}
+          {fileQuestions && (
+            <QuestionNav
+              questions={fileQuestions}
+              ordinal={ordinal}
+              onSelect={handleSelectQuestion}
+            />
+          )}
         </div>
       )}
     </div>
