@@ -1,47 +1,14 @@
-const express = require('express');
-const path = require('path');
-const fs = require('fs');
-const catalogRouter = require('./routes/catalog');
-const questionsRouter = require('./routes/questions');
-const assetsRouter = require('./routes/assets');
+// Production wiring only: read the environment, build the Mongo-backed
+// stores, and start listening. Everything else lives in app.js so the same
+// app can be built in tests with in-memory stores.
+
+const { createApp } = require('./app');
+const { configFromEnv } = require('./config');
+const { createStores } = require('./store/authStores');
 const mongo = require('./store/mongo');
 
-const app = express();
-
-// `ok` now reflects database reachability too — with the knowledge base over
-// the network, a process that is listening is no longer proof it can serve.
-app.get('/health', async (req, res) => {
-  let db = false;
-  try {
-    db = await mongo.ping();
-  } catch (error) {
-    db = false;
-  }
-  res.json({
-    ok: db,
-    hasToken: Boolean(process.env.GITHUB_TOKEN),
-    db: db ? 'up' : 'down',
-    database: mongo.databaseName()
-  });
-});
-
-app.use('/api', catalogRouter);
-app.use('/api', questionsRouter);
-app.use('/assets', assetsRouter);
-
-// Serve the built user UI in production; in dev, run `npm run dev` inside web/ separately.
-const webDist = path.join(__dirname, '..', 'web', 'dist');
-if (fs.existsSync(webDist)) {
-  app.use(express.static(webDist));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(webDist, 'index.html'));
-  });
-}
-
-app.use((error, req, res, next) => {
-  console.error(error);
-  res.status(500).json({ error: error.message });
-});
+const config = configFromEnv();
+const app = createApp({ stores: createStores(), config });
 
 const port = process.env.PORT || 4002;
 
@@ -49,12 +16,17 @@ const port = process.env.PORT || 4002;
 // instead of turning every request into a 500.
 mongo
   .ping()
+  .then(() => mongo.ensureAuthIndexes())
   .then(() => {
     app.listen(port, () => {
-      console.log(`kb-website API listening on http://localhost:${port} (db: ${mongo.databaseName()})`);
+      const providers = Object.keys(config.providers);
+      console.log(
+        `kb-website API listening on http://localhost:${port} ` +
+          `(db: ${mongo.databaseName()}, auth: ${providers.length ? providers.join(', ') : 'disabled'})`
+      );
     });
   })
   .catch((error) => {
-    console.error('Failed to connect to MongoDB:', error.message);
+    console.error('Failed to start:', error.message);
     process.exit(1);
   });

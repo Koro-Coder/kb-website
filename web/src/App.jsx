@@ -4,6 +4,8 @@ import { getSubjects, getSubjectTree, getFileQuestions, getQuestion } from './ap
 import TreeBrowser from './components/TreeBrowser.jsx';
 import QuestionGrid from './components/QuestionGrid.jsx';
 import QuestionViewer from './components/QuestionViewer.jsx';
+import AccountBar from './components/AccountBar.jsx';
+import BookmarksPage from './components/BookmarksPage.jsx';
 
 function SubjectPicker() {
   const [subjects, setSubjects] = useState(null);
@@ -15,6 +17,7 @@ function SubjectPicker() {
 
   return (
     <div className="app">
+      <AccountBar />
       <header>
         <h1>PrepFusion Question Bank</h1>
         <p className="muted">Pick a subject to browse questions.</p>
@@ -115,6 +118,7 @@ function SubjectBrowser() {
 
   return (
     <div className="app">
+      <AccountBar />
       <header>
         <p className="muted small">
           <button className="link" onClick={() => navigate('/')}>
@@ -154,7 +158,7 @@ function SubjectBrowser() {
           </div>
           {questionError && <p className="error">{questionError}</p>}
           {!questionError && !question && <p className="muted">Loading…</p>}
-          {question && <QuestionViewer bookId={bookId} question={question} />}
+          {question && <QuestionViewer bookId={bookId} subject={subject} question={question} />}
         </div>
       )}
     </div>
@@ -165,6 +169,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<SubjectPicker />} />
+      <Route path="/bookmarks" element={<BookmarksPage />} />
       <Route path="/subject/:subject" element={<SubjectBrowser />} />
     </Routes>
   );

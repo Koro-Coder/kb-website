@@ -1,4 +1,6 @@
 import MathSpan from './MathSpan.jsx';
+import BookmarkButton from './BookmarkButton.jsx';
+import QuestionActions from './QuestionActions.jsx';
 import { assetUrl, solutionAssetUrl } from '../api.js';
 
 const IMAGE_MACRO = /\\QuestionFigure(?:NoNumber)?(?:\[[^\]]*\])?\{[^{}]+\}/g;
@@ -135,7 +137,7 @@ function renderBodyNodes(body, bookId, keyPrefix, urlFor = assetUrl) {
   });
 }
 
-export default function QuestionViewer({ bookId, question }) {
+export default function QuestionViewer({ bookId, subject, question }) {
   if (!question) return null;
 
   return (
@@ -145,6 +147,8 @@ export default function QuestionViewer({ bookId, question }) {
         <strong>{question.questionType}</strong>
         <span>{question.year}</span>
         {question.marks && !question.starred && <span>{question.marks} Mark(s)</span>}
+        <span className="question-meta-spacer" />
+        <BookmarkButton bookId={bookId} subject={subject} question={question} />
       </div>
 
       {question.commonData && question.commonData.body && question.commonData.body.length > 0 && (
@@ -174,7 +178,26 @@ export default function QuestionViewer({ bookId, question }) {
         </details>
       )}
 
-      {question.solution && <SolutionSection bookId={bookId} solution={question.solution} />}
+      {question.solution && (
+        <SolutionSection
+          bookId={bookId}
+          subject={subject}
+          question={question}
+          solution={question.solution}
+        />
+      )}
+
+      {/* Requesting a video only makes sense when there isn't one already. */}
+      <QuestionActions
+        bookId={bookId}
+        subject={subject}
+        question={question}
+        types={
+          question.solution && question.solution.video
+            ? ['question_issue']
+            : ['question_issue', 'video_request']
+        }
+      />
     </div>
   );
 }
@@ -218,7 +241,7 @@ function toYouTubeEmbed(rawUrl) {
   return `https://www.youtube-nocookie.com/embed/${id}${query}`;
 }
 
-function SolutionSection({ bookId, solution }) {
+function SolutionSection({ bookId, subject, question, solution }) {
   const level = Number(solution.difficulty);
   const embedUrl = solution.video ? toYouTubeEmbed(solution.video) : null;
   return (
@@ -256,6 +279,15 @@ function SolutionSection({ bookId, solution }) {
       )}
 
       <div className="solution-body">{renderBodyNodes(solution.body, bookId, 'sol', solutionAssetUrl)}</div>
+
+      {/* Sits inside the collapsed solution: you can only report a problem
+          with a solution you have actually opened and read. */}
+      <QuestionActions
+        bookId={bookId}
+        subject={subject}
+        question={question}
+        types={['solution_issue']}
+      />
     </details>
   );
 }

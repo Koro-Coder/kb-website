@@ -134,6 +134,10 @@ router.get('/books/:bookId/question', async (req, res) => {
       fileId: file.fileId,
       ordinal: question.ordinal,
       questionId: question.questionId,
+      // Part of the (bookId, fileId, year, questionNum) identity the client
+      // needs to bookmark or report this question — the ordinal is positional
+      // and shifts when the source .tex changes.
+      questionNum: question.questionNum,
       questionType: question.questionType,
       starred: question.starred,
       year: question.year,

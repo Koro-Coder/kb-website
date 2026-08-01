@@ -12,7 +12,13 @@ const DEFAULT_DB = 'prepfusion_kb';
 const COLLECTIONS = {
   subjects: 'subjects',
   books: 'books',
-  videos: 'videos'
+  videos: 'videos',
+  // Owned by this project rather than kb-ingest: the site is where users sign
+  // in and where their bookmarks/reports are created.
+  users: 'users',
+  refreshTokens: 'refreshTokens',
+  bookmarks: 'bookmarks',
+  reports: 'reports'
 };
 
 let clientPromise = null;
@@ -57,6 +63,28 @@ async function collection(name) {
   return db.collection(name);
 }
 
+// The knowledge-base collections are indexed by kb-ingest, which owns their
+// writes. These are the site's own.
+async function ensureAuthIndexes() {
+  const db = await getDb();
+  await db
+    .collection(COLLECTIONS.users)
+    .createIndex({ provider: 1, providerUserId: 1 }, { unique: true });
+  await db.collection(COLLECTIONS.users).createIndex({ email: 1 });
+  await db.collection(COLLECTIONS.refreshTokens).createIndex({ familyId: 1 });
+  // Expired refresh tokens are worthless; let MongoDB reap them rather than
+  // growing the collection forever. Requires expiresAt to be a real Date.
+  await db.collection(COLLECTIONS.refreshTokens).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+  await db.collection(COLLECTIONS.bookmarks).createIndex({ userId: 1, createdAt: -1 });
+  await db.collection(COLLECTIONS.reports).createIndex({ userId: 1, createdAt: -1 });
+  // How an admin queue will read it: newest open reports of a given type, and
+  // everything filed against one question.
+  await db.collection(COLLECTIONS.reports).createIndex({ status: 1, type: 1, createdAt: -1 });
+  await db
+    .collection(COLLECTIONS.reports)
+    .createIndex({ bookId: 1, fileId: 1, year: 1, questionNum: 1 });
+}
+
 async function ping() {
   const db = await getDb();
   await db.command({ ping: 1 });
@@ -72,4 +100,4 @@ async function close() {
   await client.close();
 }
 
-module.exports = { getDb, collection, ping, close, databaseName, COLLECTIONS };
+module.exports = { getDb, collection, ensureAuthIndexes, ping, close, databaseName, COLLECTIONS };
