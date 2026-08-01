@@ -47,7 +47,7 @@ router.get('/solution/:bookId/*', async (req, res) => {
 
   let book;
   try {
-    book = kbStore.readBook(req.params.bookId);
+    book = await kbStore.readBook(req.params.bookId);
   } catch (error) {
     res.status(404).send('Not found');
     return;
@@ -78,7 +78,7 @@ router.get('/:bookId/*', async (req, res) => {
   }
 
   try {
-    const book = kbStore.readBook(req.params.bookId);
+    const book = await kbStore.readBook(req.params.bookId);
     await serveFromRepo(res, book.repo, relativePath, extension);
   } catch (error) {
     res.status(404).send('Not found');

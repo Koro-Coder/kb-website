@@ -3,19 +3,36 @@ const kbStore = require('../store/kbStore');
 
 const router = express.Router();
 
-router.get('/subjects', (req, res) => {
-  const catalog = kbStore.readCatalog();
-  const subjects = catalog.subjects.map((s) => ({
-    ...s,
-    bookCount: catalog.books.filter((b) => b.subject === s.key).length
-  }));
-  res.json(subjects);
+// The store is over the network now, so a failed read is no longer proof that
+// the book is missing. Only kbStore's own not-found error becomes a 404;
+// anything else (connection refused, auth, timeout) must surface as a 500.
+function isNotFound(error) {
+  return /^Book not found:/.test(error.message);
+}
+
+router.get('/subjects', async (req, res) => {
+  try {
+    const catalog = await kbStore.readCatalog();
+    const subjects = catalog.subjects.map((s) => ({
+      ...s,
+      bookCount: catalog.books.filter((b) => b.subject === s.key).length
+    }));
+    res.json(subjects);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-router.get('/subjects/:subject/books', (req, res) => {
-  const catalog = kbStore.readCatalog();
-  const books = catalog.books.filter((b) => b.subject === req.params.subject);
-  res.json(books);
+router.get('/subjects/:subject/books', async (req, res) => {
+  try {
+    const catalog = await kbStore.readCatalog();
+    const books = catalog.books.filter((b) => b.subject === req.params.subject);
+    res.json(books);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Merges every registered book's hierarchy into one subject-wide navigation
@@ -23,10 +40,17 @@ router.get('/subjects/:subject/books', (req, res) => {
 // exposes. Every node is either a branch node ({key,label,children}) or a
 // leaf node ({key,label,leaf:{bookId,fileId}}) pointing at a specific tex
 // file — the frontend renders both shapes generically.
-function buildAptitudeTree(books) {
+//
+// The builders are async because each book is a separate database read. The
+// reads are issued together rather than in sequence, so tree cost stays one
+// round trip regardless of how many books a subject has.
+async function loadBooks(summaries) {
+  return Promise.all(summaries.map((summary) => kbStore.readBook(summary.bookId)));
+}
+
+async function buildAptitudeTree(summaries) {
   const years = new Map();
-  for (const summary of books) {
-    const book = kbStore.readBook(summary.bookId);
+  for (const book of await loadBooks(summaries)) {
     for (const year of book.hierarchy || []) {
       if (!years.has(year.key)) {
         years.set(year.key, { key: year.key, label: year.label, children: [] });
@@ -44,10 +68,9 @@ function buildAptitudeTree(books) {
   return Array.from(years.values()).sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
 }
 
-function buildMathsTree(books) {
+async function buildMathsTree(summaries) {
   const chapters = new Map();
-  for (const summary of books) {
-    const book = kbStore.readBook(summary.bookId);
+  for (const book of await loadBooks(summaries)) {
     for (const chapter of book.hierarchy || []) {
       if (!chapters.has(chapter.key)) {
         chapters.set(chapter.key, { key: chapter.key, label: chapter.label, children: [] });
@@ -65,9 +88,13 @@ function buildMathsTree(books) {
   return Array.from(chapters.values()).sort((a, b) => a.label.localeCompare(b.label));
 }
 
-function buildTechnicalTree(books) {
+async function buildTechnicalTree(summaries) {
   const domains = new Map();
-  for (const summary of books) {
+  const books = await loadBooks(summaries);
+  // Zipped with `summaries` because domain/branch live on the catalog row,
+  // and Promise.all preserves order.
+  summaries.forEach((summary, index) => {
+    const book = books[index];
     const domainKey = summary.domain || 'Other';
     if (!domains.has(domainKey)) {
       domains.set(domainKey, { key: domainKey, label: domainKey, children: [] });
@@ -79,7 +106,6 @@ function buildTechnicalTree(books) {
       branchNode = { key: branchKey, label: branchKey, children: [] };
       domainNode.children.push(branchNode);
     }
-    const book = kbStore.readBook(summary.bookId);
     for (const chapter of book.hierarchy || []) {
       branchNode.children.push({
         key: `${book.bookId}:${chapter.fileId}`,
@@ -87,7 +113,7 @@ function buildTechnicalTree(books) {
         leaf: { bookId: book.bookId, fileId: chapter.fileId }
       });
     }
-  }
+  });
   return Array.from(domains.values());
 }
 
@@ -97,20 +123,25 @@ const TREE_BUILDERS = {
   technical: buildTechnicalTree
 };
 
-router.get('/subjects/:subject/tree', (req, res) => {
-  const catalog = kbStore.readCatalog();
-  const books = catalog.books.filter((b) => b.subject === req.params.subject);
+router.get('/subjects/:subject/tree', async (req, res) => {
   const builder = TREE_BUILDERS[req.params.subject];
   if (!builder) {
     res.status(404).json({ error: `Unknown subject: ${req.params.subject}` });
     return;
   }
-  res.json({ subject: req.params.subject, tree: builder(books) });
+  try {
+    const catalog = await kbStore.readCatalog();
+    const books = catalog.books.filter((b) => b.subject === req.params.subject);
+    res.json({ subject: req.params.subject, tree: await builder(books) });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-router.get('/books/:bookId/hierarchy', (req, res) => {
+router.get('/books/:bookId/hierarchy', async (req, res) => {
   try {
-    const book = kbStore.readBook(req.params.bookId);
+    const book = await kbStore.readBook(req.params.bookId);
     res.json({
       bookId: book.bookId,
       subject: book.subject,
@@ -121,7 +152,12 @@ router.get('/books/:bookId/hierarchy', (req, res) => {
       hierarchy: book.hierarchy
     });
   } catch (error) {
-    res.status(404).json({ error: `Book not found: ${req.params.bookId}` });
+    if (isNotFound(error)) {
+      res.status(404).json({ error: `Book not found: ${req.params.bookId}` });
+      return;
+    }
+    console.error(error);
+    res.status(500).json({ error: error.message });
   }
 });
 

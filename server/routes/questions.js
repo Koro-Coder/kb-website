@@ -19,16 +19,23 @@ function findFile(book, fileId) {
   return (book.files || []).find((f) => f.fileId === fileId);
 }
 
+// The store is over the network now, so a failed read is no longer proof that
+// the book is missing. Only kbStore's own not-found error becomes a 404;
+// anything else (connection refused, auth, timeout) must surface as a 500.
+function isNotFound(error) {
+  return /^Book not found:/.test(error.message);
+}
+
 // Ordinal question list for one tex file (Q1, Q2, Q3...) — served straight
 // from the knowledge base index, no GitHub call needed.
-router.get('/books/:bookId/file', (req, res) => {
+router.get('/books/:bookId/file', async (req, res) => {
   const { fileId } = req.query;
   if (!fileId) {
     res.status(400).json({ error: 'fileId query parameter is required' });
     return;
   }
   try {
-    const book = kbStore.readBook(req.params.bookId);
+    const book = await kbStore.readBook(req.params.bookId);
     const file = findFile(book, fileId);
     if (!file) {
       res.status(404).json({ error: `File not found: ${fileId}` });
@@ -42,7 +49,12 @@ router.get('/books/:bookId/file', (req, res) => {
       warnings: file.warnings
     });
   } catch (error) {
-    res.status(404).json({ error: `Book not found: ${req.params.bookId}` });
+    if (isNotFound(error)) {
+      res.status(404).json({ error: `Book not found: ${req.params.bookId}` });
+      return;
+    }
+    console.error(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -55,7 +67,7 @@ router.get('/books/:bookId/question', async (req, res) => {
     return;
   }
   try {
-    const book = kbStore.readBook(req.params.bookId);
+    const book = await kbStore.readBook(req.params.bookId);
     const file = findFile(book, fileId);
     if (!file) {
       res.status(404).json({ error: `File not found: ${fileId}` });
@@ -101,7 +113,7 @@ router.get('/books/:bookId/question', async (req, res) => {
         // LaTeX source carries, so videos can be added without editing the
         // solution repo.
         if (solution) {
-          const override = videoStore.getVideo(
+          const override = await videoStore.getVideo(
             req.params.bookId,
             file.fileId,
             question.year,
