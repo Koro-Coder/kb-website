@@ -2,21 +2,25 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../auth.jsx';
 import { listMyReports, submitReport, withdrawReport } from '../api.js';
 
-// The three report types share everything except their wording and whether a
-// comment is required, so they share one component too.
+// The three report types differ only in wording and whether a comment is
+// required, so they share one component. Each carries its own sign-in prompt:
+// "sign in to report a problem or request a video solution" told you about
+// actions you were not looking at.
 const COPY = {
   question_issue: {
-    idle: '⚑ Report a problem',
+    idle: '⚑ Report problem with question',
     done: '⚑ Problem reported',
     title: "What's wrong with this question?",
     placeholder: 'e.g. option (C) is misprinted, the figure is missing, the answer key looks wrong…',
+    signedOut: 'to report a problem with this question.',
     requiresComment: true
   },
   solution_issue: {
-    idle: '⚑ Report a problem with this solution',
+    idle: '⚑ Report problem with solution',
     done: '⚑ Solution problem reported',
     title: "What's wrong with this solution?",
     placeholder: 'e.g. step 3 divides by zero, the final answer disagrees with the key…',
+    signedOut: 'to report a problem with this solution.',
     requiresComment: true
   },
   video_request: {
@@ -24,14 +28,13 @@ const COPY = {
     done: '🎬 Video requested',
     title: 'Request a video solution',
     placeholder: 'Optional: anything in particular you find hard here?',
+    signedOut: 'to request a video solution.',
     requiresComment: false
   }
 };
 
 const MAX_COMMENT = 4000;
 
-// Identity is (bookId, fileId, year, questionNum); the rest are hints so an
-// admin queue can label and link the row.
 function refFor({ bookId, subject, question }) {
   return {
     bookId,
@@ -55,8 +58,6 @@ export default function QuestionActions({ bookId, subject, question, types }) {
 
   const identifiable = question.questionNum !== undefined && question.questionNum !== null;
 
-  // Which of these has this user already filed? One request for all types on
-  // this question, rather than one per button.
   useEffect(() => {
     let cancelled = false;
     setMine(null);
@@ -81,7 +82,6 @@ export default function QuestionActions({ bookId, subject, question, types }) {
     };
   }, [isSignedIn, identifiable, authFetch, bookId, question.fileId, question.year, question.questionNum]);
 
-  // Nothing stable to attach a report to.
   if (!identifiable || status === 'loading') {
     return null;
   }
@@ -89,10 +89,14 @@ export default function QuestionActions({ bookId, subject, question, types }) {
   if (!isSignedIn) {
     return (
       <div className="question-actions">
-        <button className="link" onClick={signIn}>
-          Sign in
-        </button>{' '}
-        <span className="muted small">to report a problem or request a video solution.</span>
+        {types.map((type) => (
+          <span key={type} className="muted small signin-prompt">
+            <button className="link" onClick={signIn}>
+              Sign in
+            </button>{' '}
+            {COPY[type].signedOut}
+          </span>
+        ))}
       </div>
     );
   }
@@ -109,9 +113,8 @@ export default function QuestionActions({ bookId, subject, question, types }) {
     setError('');
   };
 
-  const send = async (type) => {
-    const copy = COPY[type];
-    if (copy.requiresComment && !comment.trim()) {
+  const save = async (type) => {
+    if (COPY[type].requiresComment && !comment.trim()) {
       setError('Please describe the problem.');
       return;
     }
@@ -132,10 +135,11 @@ export default function QuestionActions({ bookId, subject, question, types }) {
     }
   };
 
-  const drop = async (type) => {
+  const remove = async (type) => {
     const existing = mine && mine[type];
     if (!existing) return;
     setBusy(true);
+    setError('');
     try {
       await withdrawReport(authFetch, existing.id);
       setMine((current) => {
@@ -165,9 +169,11 @@ export default function QuestionActions({ bookId, subject, question, types }) {
             >
               {filed ? copy.done : copy.idle}
             </button>
+            {/* Once filed, the same button reopens the form — where Update and
+                Delete both live — rather than offering a bare "withdraw". */}
             {filed && (
-              <button className="link small" onClick={() => drop(type)} disabled={busy}>
-                withdraw
+              <button className="link small" onClick={() => open(type)} disabled={busy}>
+                Edit
               </button>
             )}
           </span>
@@ -186,9 +192,14 @@ export default function QuestionActions({ bookId, subject, question, types }) {
             onChange={(e) => setComment(e.target.value)}
           />
           <div className="report-form-actions">
-            <button className="btn-primary" onClick={() => send(openType)} disabled={busy}>
+            <button className="btn-primary" onClick={() => save(openType)} disabled={busy}>
               {mine && mine[openType] ? 'Update' : 'Submit'}
             </button>
+            {mine && mine[openType] && (
+              <button className="btn-danger" onClick={() => remove(openType)} disabled={busy}>
+                Delete
+              </button>
+            )}
             <button className="link" onClick={close} disabled={busy}>
               Cancel
             </button>

@@ -62,6 +62,44 @@ export async function submitReport(authFetch, report) {
   return handle(await authFetch('/api/reports', { method: 'POST', body: JSON.stringify(report) }));
 }
 
+// --- Notifications ---------------------------------------------------------
+// Created by the admin side when a report is resolved; the reader only reads
+// and dismisses them.
+
+export async function listNotifications(authFetch) {
+  return handle(await authFetch('/api/notifications'));
+}
+
+export async function markAllNotificationsRead(authFetch) {
+  return handle(await authFetch('/api/notifications/read', { method: 'POST' }));
+}
+
+export async function dismissNotification(authFetch, id) {
+  const res = await authFetch(`/api/notifications/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Could not dismiss (${res.status})`);
+  }
+  return true;
+}
+
+// --- Difficulty ratings ----------------------------------------------------
+
+export async function listMyRatings(authFetch) {
+  return handle(await authFetch('/api/ratings/mine'));
+}
+
+export async function rateQuestion(authFetch, rating) {
+  return handle(await authFetch('/api/ratings', { method: 'POST', body: JSON.stringify(rating) }));
+}
+
+export async function clearRating(authFetch, id) {
+  const res = await authFetch(`/api/ratings/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Could not clear rating (${res.status})`);
+  }
+  return true;
+}
+
 export async function withdrawReport(authFetch, id) {
   const res = await authFetch(`/api/reports/${encodeURIComponent(id)}`, { method: 'DELETE' });
   if (!res.ok && res.status !== 404) {

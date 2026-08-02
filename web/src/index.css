@@ -204,6 +204,185 @@ button.link {
   }
 }
 
+/* --- Notification bell ---------------------------------------------------- */
+
+.bell-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.bell-btn {
+  position: relative;
+  background: none;
+  border: none;
+  font-size: 1.05rem;
+  line-height: 1;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+
+.bell-badge {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #b3261e;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.bell-panel {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  z-index: 20;
+  width: min(360px, calc(100vw - 32px));
+  max-height: 420px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+  text-align: left;
+}
+
+.bell-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid #eceef0;
+}
+
+.bell-empty {
+  padding: 16px 14px;
+  margin: 0;
+}
+
+.bell-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bell-list li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 11px 14px;
+  border-bottom: 1px solid #f2f3f5;
+}
+
+.bell-list li.is-linked {
+  cursor: pointer;
+}
+
+.bell-list li.is-linked:hover {
+  background: #f5f7fb;
+}
+
+/* Unread is marked with a rail rather than a heavy background, so a full
+   panel does not become a wall of colour. */
+.bell-list li.is-unread {
+  box-shadow: inset 3px 0 0 #2456e5;
+}
+
+.bell-icon {
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.bell-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.bell-q {
+  font-size: 0.8rem;
+  color: #2456e5;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.bell-dismiss {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.bell-dismiss:hover {
+  color: #b3261e;
+}
+
+/* --- Rate question -------------------------------------------------------- */
+
+.rate-question {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #eceef0;
+  font-size: 0.85rem;
+}
+
+.rate-label {
+  font-weight: 600;
+  color: #555;
+  margin-right: 2px;
+}
+
+.rate-btn {
+  background: none;
+  border: 1px solid #d5d7db;
+  border-radius: 999px;
+  padding: 3px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+}
+
+.rate-btn:hover:not(:disabled) {
+  border-color: #2456e5;
+  color: #2456e5;
+}
+
+/* Chosen level is colour-coded, so a glance says how hard you found it. */
+.rate-btn.is-chosen.rate-easy {
+  background: #dff3e4;
+  border-color: #1d6b33;
+  color: #1d6b33;
+}
+
+.rate-btn.is-chosen.rate-medium {
+  background: #fdeccf;
+  border-color: #8a5300;
+  color: #8a5300;
+}
+
+.rate-btn.is-chosen.rate-hard {
+  background: #fde2e1;
+  border-color: #b3261e;
+  color: #b3261e;
+}
+
+.rate-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* --- Report / request actions -------------------------------------------- */
 
 .question-actions {
@@ -300,6 +479,32 @@ button.link {
 .btn-primary:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+.btn-danger {
+  background: none;
+  border: 1px solid #b3261e;
+  border-radius: 999px;
+  color: #b3261e;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 5px 16px;
+  cursor: pointer;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #fde2e1;
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Each action gets its own line when signed out, so the prompt names the
+   action it belongs to rather than listing them all in one sentence. */
+.signin-prompt {
+  flex-basis: 100%;
 }
 
 .bookmark-subject {

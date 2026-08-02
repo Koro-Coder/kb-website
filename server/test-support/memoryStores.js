@@ -183,12 +183,96 @@ function createReportStore() {
   };
 }
 
+// Ratings and reports have the same shape of access, so they share one
+// implementation here — the difference is what a row means, not how it is
+// stored.
+function createKeyedByUserStore() {
+  const byId = new Map();
+
+  return {
+    async listForUser(userId) {
+      return Array.from(byId.values())
+        .filter((r) => r.userId === userId)
+        .map(clone);
+    },
+    async get(userId, id) {
+      const row = byId.get(id);
+      return row && row.userId === userId ? clone(row) : null;
+    },
+    async upsert(row) {
+      byId.set(row.id, { ...row });
+      return clone(row);
+    },
+    async remove(userId, id) {
+      const existing = byId.get(id);
+      if (!existing || existing.userId !== userId) {
+        return false;
+      }
+      byId.delete(id);
+      return true;
+    },
+    _all() {
+      return Array.from(byId.values()).map(clone);
+    },
+    _count() {
+      return byId.size;
+    }
+  };
+}
+
 function createStores() {
   return {
     users: createUserStore(),
     refreshTokens: createRefreshTokenStore(),
     bookmarks: createBookmarkStore(),
-    reports: createReportStore()
+    reports: createReportStore(),
+    ratings: createKeyedByUserStore(),
+    notifications: createNotificationStore()
+  };
+}
+
+function createNotificationStore(seed = []) {
+  const byId = new Map(seed.map((n) => [n.id, { ...n }]));
+
+  return {
+    async listForUser(userId) {
+      return Array.from(byId.values())
+        .filter((n) => n.userId === userId)
+        .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+        .map(clone);
+    },
+    async countUnread(userId) {
+      return Array.from(byId.values()).filter((n) => n.userId === userId && !n.readAt).length;
+    },
+    async markAllRead(userId, at) {
+      let n = 0;
+      for (const row of byId.values()) {
+        if (row.userId === userId && !row.readAt) {
+          row.readAt = at;
+          n += 1;
+        }
+      }
+      return n;
+    },
+    async markRead(userId, id, at) {
+      const row = byId.get(id);
+      if (!row || row.userId !== userId) return false;
+      row.readAt = at;
+      return true;
+    },
+    async remove(userId, id) {
+      const row = byId.get(id);
+      if (!row || row.userId !== userId) return false;
+      byId.delete(id);
+      return true;
+    },
+    // Test-only: stands in for kb-ingest, which is what really creates these.
+    _seed(notification) {
+      byId.set(notification.id, { readAt: null, ...notification });
+    },
+    _count() {
+      return byId.size;
+    }
   };
 }
 

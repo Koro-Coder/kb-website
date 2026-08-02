@@ -16,6 +16,8 @@ const assetsRouter = require('./routes/assets');
 const { createAuthRouter } = require('./routes/auth');
 const { createBookmarksRouter } = require('./routes/bookmarks');
 const { createReportsRouter } = require('./routes/reports');
+const { createRatingsRouter } = require('./routes/ratings');
+const { createNotificationsRouter } = require('./routes/notifications');
 const { createTokenService } = require('./auth/tokens');
 const { createRefreshService } = require('./auth/refreshTokens');
 const { createRequireAuth, createOptionalAuth } = require('./auth/middleware');
@@ -70,6 +72,11 @@ function createApp({ stores, config: rawConfig, now = Date.now }) {
   app.use('/api/auth', createAuthRouter({ stores, config, tokens, refreshService, requireAuth, now }));
   app.use('/api/bookmarks', createBookmarksRouter({ store: stores.bookmarks, requireAuth, now }));
   app.use('/api/reports', createReportsRouter({ store: stores.reports, requireAuth, now }));
+  app.use('/api/ratings', createRatingsRouter({ store: stores.ratings, requireAuth, now }));
+  app.use(
+    '/api/notifications',
+    createNotificationsRouter({ store: stores.notifications, requireAuth, now })
+  );
 
   // Browsing stays open to everyone; optionalAuth only attaches req.user when
   // a token happens to be present, so these routes can personalise later

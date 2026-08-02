@@ -162,12 +162,78 @@ function createReportStore() {
   };
 }
 
+// Same access shape as reports, over a different collection.
+function createRatingStore() {
+  return {
+    async listForUser(userId) {
+      const ratings = await collection(COLLECTIONS.ratings);
+      const rows = await ratings.find({ userId }).sort({ updatedAt: -1 }).toArray();
+      return rows.map(withId);
+    },
+
+    async get(userId, id) {
+      const ratings = await collection(COLLECTIONS.ratings);
+      return withId(await ratings.findOne({ _id: id, userId }));
+    },
+
+    async upsert(rating) {
+      const ratings = await collection(COLLECTIONS.ratings);
+      const { id, ...fields } = rating;
+      await ratings.replaceOne({ _id: id }, { ...fields }, { upsert: true });
+      return rating;
+    },
+
+    async remove(userId, id) {
+      const ratings = await collection(COLLECTIONS.ratings);
+      const result = await ratings.deleteOne({ _id: id, userId });
+      return result.deletedCount > 0;
+    }
+  };
+}
+
+// Written by kb-ingest when a report is resolved; this project only ever reads
+// them and marks them read.
+function createNotificationStore() {
+  return {
+    async listForUser(userId) {
+      const notifications = await collection(COLLECTIONS.notifications);
+      const rows = await notifications.find({ userId }).sort({ createdAt: -1 }).limit(100).toArray();
+      return rows.map(withId);
+    },
+
+    async countUnread(userId) {
+      const notifications = await collection(COLLECTIONS.notifications);
+      return notifications.countDocuments({ userId, readAt: null });
+    },
+
+    async markAllRead(userId, at) {
+      const notifications = await collection(COLLECTIONS.notifications);
+      const result = await notifications.updateMany({ userId, readAt: null }, { $set: { readAt: at } });
+      return result.modifiedCount;
+    },
+
+    async markRead(userId, id, at) {
+      const notifications = await collection(COLLECTIONS.notifications);
+      const result = await notifications.updateOne({ _id: id, userId }, { $set: { readAt: at } });
+      return result.matchedCount > 0;
+    },
+
+    async remove(userId, id) {
+      const notifications = await collection(COLLECTIONS.notifications);
+      const result = await notifications.deleteOne({ _id: id, userId });
+      return result.deletedCount > 0;
+    }
+  };
+}
+
 function createStores() {
   return {
     users: createUserStore(),
     refreshTokens: createRefreshTokenStore(),
     bookmarks: createBookmarkStore(),
-    reports: createReportStore()
+    reports: createReportStore(),
+    ratings: createRatingStore(),
+    notifications: createNotificationStore()
   };
 }
 

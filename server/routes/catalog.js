@@ -1,5 +1,6 @@
 const express = require('express');
 const kbStore = require('../store/kbStore');
+const { profileForSubject } = require('../parsing/adapters');
 
 const router = express.Router();
 
@@ -117,14 +118,27 @@ async function buildTechnicalTree(summaries) {
   return Array.from(domains.values());
 }
 
-const TREE_BUILDERS = {
-  aptitude: buildAptitudeTree,
-  maths: buildMathsTree,
-  technical: buildTechnicalTree
+// Keyed by parser profile rather than by subject: the tree shape follows the
+// repo layout, so any subject sharing the technical layout (Nexus X, Silicon X,
+// Power X) gets the right navigation without being listed here.
+const TREE_BUILDERS_BY_PROFILE = {
+  'aptitude-year-session': buildAptitudeTree,
+  'maths-chapter-branch': buildMathsTree,
+  'technical-chapter-file': buildTechnicalTree
 };
 
+function treeBuilderFor(subject) {
+  let profile;
+  try {
+    profile = profileForSubject(subject);
+  } catch (error) {
+    return null;
+  }
+  return TREE_BUILDERS_BY_PROFILE[profile] || null;
+}
+
 router.get('/subjects/:subject/tree', async (req, res) => {
-  const builder = TREE_BUILDERS[req.params.subject];
+  const builder = treeBuilderFor(req.params.subject);
   if (!builder) {
     res.status(404).json({ error: `Unknown subject: ${req.params.subject}` });
     return;

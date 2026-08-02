@@ -1,6 +1,7 @@
 import MathSpan from './MathSpan.jsx';
 import BookmarkButton from './BookmarkButton.jsx';
 import QuestionActions from './QuestionActions.jsx';
+import RateQuestion from './RateQuestion.jsx';
 import { assetUrl, solutionAssetUrl } from '../api.js';
 
 const IMAGE_MACRO = /\\QuestionFigure(?:NoNumber)?(?:\[[^\]]*\])?\{[^{}]+\}/g;
@@ -172,6 +173,8 @@ export default function QuestionViewer({ bookId, subject, question }) {
         <BookmarkButton bookId={bookId} subject={subject} question={question} />
       </div>
 
+      <RateQuestion bookId={bookId} subject={subject} question={question} />
+
       {question.commonData && question.commonData.body && question.commonData.body.length > 0 && (
         <div className="common-data">
           <div className="common-data-label">Common Data</div>
@@ -192,6 +195,16 @@ export default function QuestionViewer({ bookId, subject, question }) {
         </div>
       )}
 
+      {/* Sits directly below the question and its options, before the answer:
+          a problem with the question is something you notice while reading it,
+          not after working through the solution. */}
+      <QuestionActions
+        bookId={bookId}
+        subject={subject}
+        question={question}
+        types={['question_issue']}
+      />
+
       {question.answer && (
         <details className="answer">
           <summary>Show answer</summary>
@@ -208,17 +221,17 @@ export default function QuestionViewer({ bookId, subject, question }) {
         />
       )}
 
-      {/* Requesting a video only makes sense when there isn't one already. */}
-      <QuestionActions
-        bookId={bookId}
-        subject={subject}
-        question={question}
-        types={
-          question.solution && question.solution.video
-            ? ['question_issue']
-            : ['question_issue', 'video_request']
-        }
-      />
+      {/* Requesting a video only makes sense when there isn't one already.
+          Nothing renders here when there is, since the question report has
+          moved up to sit under the question itself. */}
+      {!(question.solution && question.solution.video) && (
+        <QuestionActions
+          bookId={bookId}
+          subject={subject}
+          question={question}
+          types={['video_request']}
+        />
+      )}
     </div>
   );
 }

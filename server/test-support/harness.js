@@ -146,7 +146,10 @@ async function startHarness(overrides = {}) {
       start,
       callback,
       refresh: refreshed,
-      accessToken: refreshed.body && refreshed.body.accessToken
+      accessToken: refreshed.body && refreshed.body.accessToken,
+      // The signed-in profile, so a test can seed rows owned by this user
+      // without digging the id out of the store.
+      user: refreshed.body && refreshed.body.user
     };
   }
 

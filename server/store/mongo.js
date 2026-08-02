@@ -18,7 +18,10 @@ const COLLECTIONS = {
   users: 'users',
   refreshTokens: 'refreshTokens',
   bookmarks: 'bookmarks',
-  reports: 'reports'
+  reports: 'reports',
+  ratings: 'ratings',
+  // Created by kb-ingest when an admin resolves a report; read here.
+  notifications: 'notifications'
 };
 
 let clientPromise = null;
@@ -82,6 +85,11 @@ async function ensureAuthIndexes() {
   await db.collection(COLLECTIONS.reports).createIndex({ status: 1, type: 1, createdAt: -1 });
   await db
     .collection(COLLECTIONS.reports)
+    .createIndex({ bookId: 1, fileId: 1, year: 1, questionNum: 1 });
+  await db.collection(COLLECTIONS.ratings).createIndex({ userId: 1, updatedAt: -1 });
+  // How the admin difficulty analytics reads it: every rating for one question.
+  await db
+    .collection(COLLECTIONS.ratings)
     .createIndex({ bookId: 1, fileId: 1, year: 1, questionNum: 1 });
 }
 

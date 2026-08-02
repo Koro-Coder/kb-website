@@ -8,6 +8,14 @@ import QuestionNav from './components/QuestionNav.jsx';
 import AccountBar from './components/AccountBar.jsx';
 import BookmarksPage from './components/BookmarksPage.jsx';
 
+function subjectTitle(key) {
+  return String(key || '')
+    .split(/[_-]/)
+    .filter(Boolean)
+    .map((word) => word[0].toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 function SubjectPicker() {
   const [subjects, setSubjects] = useState(null);
   const [error, setError] = useState('');
@@ -129,7 +137,9 @@ function SubjectBrowser() {
             ← All subjects
           </button>
         </p>
-        <h1>{subject[0].toUpperCase() + subject.slice(1)}</h1>
+        {/* Subject keys are slugs (nexus_x), so underscores become spaces and
+            each word is capitalised — "Nexus X", not "Nexus_x". */}
+        <h1>{subjectTitle(subject)}</h1>
       </header>
 
       {treeError && <p className="error">{treeError}</p>}

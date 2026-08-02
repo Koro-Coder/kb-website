@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
+import NotificationBell from './NotificationBell.jsx';
 
 // Sits above every page. Browsing never requires an account, so this is the
 // only thing that changes when signed out — nothing else is hidden or blocked.
@@ -19,6 +20,7 @@ export default function AccountBar() {
 
       {isSignedIn && user && (
         <>
+          <NotificationBell />
           <Link className="account-link" to="/bookmarks">
             ★ Bookmarks
           </Link>
