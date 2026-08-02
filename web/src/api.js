@@ -6,6 +6,13 @@ async function handle(res) {
   return data;
 }
 
+// Every shelf, every card and every count on the landing page in one request.
+// The server caches this, so it is far cheaper than fetching each subject's
+// tree separately would be.
+export function getLibrary() {
+  return fetch('/api/library').then(handle);
+}
+
 export function getSubjects() {
   return fetch('/api/subjects').then(handle);
 }

@@ -163,7 +163,7 @@ export default function QuestionActions({ bookId, subject, question, types }) {
         return (
           <span key={type} className="action-slot">
             <button
-              className={`action-btn${filed ? ' is-filed' : ''}`}
+              className={`pill action-btn${filed ? ' is-filed' : ''}`}
               onClick={() => (openType === type ? close() : open(type))}
               disabled={busy}
             >

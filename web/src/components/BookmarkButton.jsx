@@ -62,7 +62,7 @@ export default function BookmarkButton({ bookId, subject, question }) {
 
   if (!isSignedIn) {
     return (
-      <button className="bookmark-btn" onClick={signIn} title="Sign in to bookmark this question">
+      <button className="pill bookmark-btn" onClick={signIn} title="Sign in to bookmark this question">
         ☆ Bookmark
       </button>
     );
@@ -89,7 +89,7 @@ export default function BookmarkButton({ bookId, subject, question }) {
   return (
     <>
       <button
-        className={`bookmark-btn${bookmarkId ? ' is-bookmarked' : ''}`}
+        className={`pill bookmark-btn${bookmarkId ? ' is-bookmarked' : ''}`}
         onClick={toggle}
         disabled={busy}
         aria-pressed={Boolean(bookmarkId)}

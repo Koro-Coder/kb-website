@@ -3,7 +3,35 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PrepFusion Question Bank</title>
+    <meta
+      name="description"
+      content="Every GATE previous-year question and solution, browsable by subject, chapter and year — free, no sign-up."
+    />
+    <title>PrepFusion Study Hub</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    />
+
+    <script>
+      /* Apply the saved (or OS-preferred) theme before first paint. Setting it
+         from React instead would flash the wrong theme for a frame on every
+         load, since the bundle only runs after the document has painted. */
+      (function () {
+        try {
+          var saved = localStorage.getItem('pf-theme');
+          var dark = saved
+            ? saved === 'dark'
+            : window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

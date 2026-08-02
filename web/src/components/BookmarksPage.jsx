@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
 import { listBookmarks, removeBookmark, getSubjectTree } from '../api.js';
+import { seriesFor, subjectTitle, plural } from '../series.js';
 
 // Walks a subject tree and indexes every leaf by the book+file it points at,
 // recording the branch labels (and keys) sitting above it.
@@ -26,8 +27,10 @@ function indexTree(nodes, ancestors = [], into = new Map()) {
   return into;
 }
 
+// The same display name the shelves use, so "nexus_x" reads as "Nexus X" here
+// too rather than as "Nexus_x".
 function titleCase(value) {
-  return value ? value[0].toUpperCase() + value.slice(1) : value;
+  return seriesFor(value).label || subjectTitle(value);
 }
 
 // Rebuilds the browse URL including the tree path, so going "back" from a
@@ -116,15 +119,16 @@ export default function BookmarksPage() {
   };
 
   return (
-    <div className="app">
-      <header>
-        <p className="muted small">
-          <button className="link" onClick={() => navigate('/')}>
-            ← All subjects
-          </button>
-        </p>
+    <div className="page-head">
+      <nav className="crumbs" aria-label="Breadcrumb">
+        <button onClick={() => navigate('/')}>Study Hub</button>
+        <span className="crumb-sep">/</span>
+        <span className="crumb-now">Bookmarks</span>
+      </nav>
+      <div className="page-title">
         <h1>Your bookmarks</h1>
-      </header>
+        {bookmarks && <span className="page-count">{plural(bookmarks.length, 'question')}</span>}
+      </div>
 
       {status === 'loading' && <p className="muted">Loading…</p>}
 

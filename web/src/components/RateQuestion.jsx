@@ -87,7 +87,7 @@ export default function RateQuestion({ bookId, subject, question }) {
         return (
           <button
             key={level.value}
-            className={`rate-btn rate-${level.value}${chosen ? ' is-chosen' : ''}`}
+            className={`pill rate-btn rate-${level.value}${chosen ? ' is-chosen' : ''}`}
             disabled={busy}
             aria-pressed={Boolean(chosen)}
             title={

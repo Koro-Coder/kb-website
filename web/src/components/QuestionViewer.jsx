@@ -5,10 +5,25 @@ import RateQuestion from './RateQuestion.jsx';
 import { assetUrl, solutionAssetUrl } from '../api.js';
 
 const IMAGE_MACRO = /\\QuestionFigure(?:NoNumber)?(?:\[[^\]]*\])?\{[^{}]+\}/g;
-// The (?<!\\) guards make an escaped \$ — LaTeX for a literal dollar sign —
-// ineligible as a delimiter. Without them, prose like "costs \$5 to \$10"
-// would have its middle swallowed and rendered as maths.
-const MATH_PATTERN = /(?<!\\)\$\$([\s\S]*?)(?<!\\)\$\$|(?<!\\)\$([^$]*?)(?<!\\)\$/g;
+// All four standard LaTeX math delimiters, in capture-group order:
+//   1  $$…$$   display
+//   2  \[…\]   display
+//   3  $…$     inline
+//   4  \(…\)   inline
+//
+// The bracket forms were missing here, so an option written \(e^{j2\pi t}\) —
+// valid source the server tokenizer has always understood for question bodies
+// (see parsing/texTokenizer.js) — printed as literal backslashes and braces.
+// Options and \item labels are stored as raw LaTeX and parsed here rather than
+// server-side, so they need their own copy of this knowledge.
+//
+// The (?<!\\) guards make an escaped delimiter ineligible: \$ is LaTeX for a
+// literal dollar (prose like "costs \$5 to \$10" would otherwise have its
+// middle swallowed as maths), and \\[ is LaTeX's line break followed by a
+// bracket, which without the guard would match as an opening \[ one character
+// in.
+const MATH_PATTERN =
+  /(?<!\\)\$\$([\s\S]*?)(?<!\\)\$\$|(?<!\\)\\\[([\s\S]*?)(?<!\\)\\\]|(?<!\\)\$([^$]*?)(?<!\\)\$|(?<!\\)\\\(([\s\S]*?)(?<!\\)\\\)/g;
 
 // A literal dollar reaches us as \$ (still escaped, from raw LaTeX) or as a
 // bare $ (the tokenizer unescapes it in body text). Only the former needs
@@ -33,10 +48,11 @@ function renderInlineText(text, keyPrefix) {
         <span key={`${keyPrefix}-t${idx}`}>{unescapeDollars(text.slice(pos, match.index))}</span>
       );
     }
-    // match[1] is the $$...$$ capture, match[2] the $...$ one — so the
-    // delimiter tells us display vs inline here too.
-    const expr = match[1] ?? match[2];
-    nodes.push(<MathSpan key={`${keyPrefix}-m${idx}`} expr={expr} display={match[1] !== undefined} />);
+    // Which group matched tells us both the expression and, because the two
+    // display forms are groups 1 and 2, whether it renders as a block.
+    const expr = match[1] ?? match[2] ?? match[3] ?? match[4];
+    const display = match[1] !== undefined || match[2] !== undefined;
+    nodes.push(<MathSpan key={`${keyPrefix}-m${idx}`} expr={expr} display={display} />);
     pos = match.index + match[0].length;
     idx += 1;
   }

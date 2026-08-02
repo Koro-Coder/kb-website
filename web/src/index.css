@@ -1,649 +1,1486 @@
 @import 'katex/dist/katex.min.css';
 
+/* ===========================================================================
+   PALETTE
+   Every text/background pair below clears WCAG AA (4.5:1) in BOTH themes.
+   Series colours (--sc / --sc-d) are set per element from src/series.js as
+   literal hex; --sc-use is what every rule reads, so switching theme switches
+   the swatch without duplicating a single rule.
+   =========================================================================== */
 :root {
-  color-scheme: light dark;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  color-scheme: light;
+  --paper: #f2f5fa;
+  --card: #ffffff;
+  --ink: #0a1020;        /* 19.0:1 on card */
+  --ink-soft: #475a78;   /*  7.0:1 on card */
+  --ink-faint: #4f6080;  /*  5.4:1 on chip */
+  --line: #dde4f0;
+  --line-strong: #c3cddf;
+  --brand: #14307f;
+  --accent: #ffcf2d;
+  /* The "Fusion" half of the wordmark. NOT --brand: that is a muted navy for
+     links and focus rings, and against --ink it measures 1.59:1 — the two-tone
+     effect would be applied but invisible. */
+  --wordmark: #1668d6;
+  /* --accent as TEXT on these backgrounds is ~1.4:1. --accent-ink is the
+     readable end of the same family, for anywhere the accent colours a letter
+     or a word rather than a dot or a fill. */
+  --accent-ink: #7a4200;
+  --chipbg: #e9eef7;
+  --on-ink: #ffffff;
+  --soon-bg: #fff9e6;
+  --soon-ink: #735d14;
+  --ok: #1d6b33;
+  --warn: #8a5300;
+  --bad: #b3261e;
+  --bad-bg: #fdf1f0;
+  --radius: 18px;
+  --shadow: 0 1px 2px rgba(10, 16, 32, 0.06), 0 10px 30px -14px rgba(10, 16, 32, 0.22);
+  --shadow-lift: 0 3px 8px rgba(10, 16, 32, 0.1), 0 26px 50px -18px rgba(10, 16, 32, 0.32);
+  --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Sora', 'Inter', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --paper: #0a1020;
+  --card: #151f36;
+  --ink: #f2f6ff;        /* 15.1:1 on card */
+  --ink-soft: #a9b8d6;   /*  8.2:1 on card */
+  --ink-faint: #94a4c4;  /*  5.8:1 on chip */
+  --line: #2a3854;
+  --line-strong: #3c4d70;
+  --brand: #9db6ff;
+  --accent: #ffd54a;
+  --wordmark: #4d92ff;
+  /* Already 11-13:1 on these backgrounds as text — no darkening needed. */
+  --accent-ink: #ffd54a;
+  --chipbg: #1e2942;
+  --on-ink: #0a1020;
+  --soon-bg: #3f403a;
+  --soon-ink: #ffd54a;
+  --ok: #6ed3a3;
+  --warn: #f0c26a;
+  --bad: #ff8a80;
+  --bad-bg: #3a1f1d;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 10px 30px -14px rgba(0, 0, 0, 0.75);
+  --shadow-lift: 0 3px 8px rgba(0, 0, 0, 0.55), 0 26px 50px -18px rgba(0, 0, 0, 0.9);
+}
+
+.card,
+.chip,
+.shelf,
+.sec-card,
+.qlist-head {
+  --sc-use: var(--sc);
+}
+:root[data-theme='dark'] .card,
+:root[data-theme='dark'] .chip,
+:root[data-theme='dark'] .shelf,
+:root[data-theme='dark'] .sec-card,
+:root[data-theme='dark'] .qlist-head {
+  --sc-use: var(--sc-d);
+}
+
+/* ---------- base ---------- */
+
+* {
+  box-sizing: border-box;
+}
+
+/* Any element with a `display` rule of its own permanently wins over the
+   browser's default [hidden]{display:none} — author CSS always beats the UA
+   stylesheet regardless of specificity. */
+[hidden] {
+  display: none !important;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  background: #f4f5f7;
-  color: #1a1a1a;
+  color: var(--ink);
+  background: var(--paper);
+  font: 400 16px/1.65 var(--sans);
+  transition: background-color 0.2s, color 0.2s;
 }
 
-.app {
-  max-width: 960px;
+a {
+  color: var(--brand);
+}
+
+::selection {
+  background: var(--accent);
+  color: #0a1020;
+}
+
+:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.wrap {
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 24px 16px 64px;
-}
-
-header h1 {
-  font-size: 1.6rem;
-  margin: 4px 0 12px;
+  padding: 0 24px;
 }
 
 .muted {
-  color: #666;
+  color: var(--ink-soft);
 }
 
 .small {
   font-size: 0.85rem;
 }
 
+.mono {
+  font-family: var(--mono);
+}
+
 .error {
-  color: #b3261e;
+  color: var(--bad);
   font-weight: 600;
 }
 
-.breadcrumbs {
-  margin-bottom: 16px;
-  font-size: 0.9rem;
+/* Visually hidden, still announced. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 button.link {
   background: none;
   border: none;
-  color: #2456e5;
+  color: var(--brand);
   padding: 0;
+  font: inherit;
   font-weight: 600;
   cursor: pointer;
-  font-size: inherit;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 12px;
+button.link:hover {
+  text-decoration: underline;
 }
 
-/* --- Account / auth ------------------------------------------------------ */
+/* ---------- brand wordmark ---------- */
 
-.account-bar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 14px;
-  min-height: 34px;
-  margin-bottom: 8px;
-  font-size: 0.9rem;
-}
-
-.account-link {
-  color: #2456e5;
-  font-weight: 600;
+.logo {
+  color: var(--ink);
   text-decoration: none;
 }
 
-.account-user {
+.bm {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* No logo file ships with this app, so the mark is drawn: a rounded ink tile
+   with a "P" knocked out of it. Same silhouette as the PDF library's bitmap. */
+.bm-mono {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--paper);
+  font: 800 13px var(--display);
+  flex-shrink: 0;
+}
+
+/* NEVER text-transform this — the mark is "PrepFusion", not "PREPFUSION". */
+.bm-text {
+  font: 600 15px var(--display);
+  letter-spacing: -0.02em;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.bm-text b {
+  font-weight: 800;
+  color: var(--wordmark);
+}
+
+.bm-lg .bm-mono {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  font-size: 19px;
+  transform: rotate(-4deg);
+}
+
+.bm-lg .bm-text {
+  font: 700 20px var(--display);
+  letter-spacing: -0.03em;
+}
+
+/* ---------- top bar ---------- */
+
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .bar {
+    background: color-mix(in srgb, var(--paper) 86%, transparent);
+    backdrop-filter: blur(14px);
+  }
+}
+
+.bar-in {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 13px 24px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.nav {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  align-items: center;
+}
+
+.nav a,
+.nav .nav-soon {
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 13px;
+  border-radius: 9px;
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #444;
 }
 
-.avatar {
-  width: 22px;
-  height: 22px;
+/* currentColor means every nav icon tracks its own link's colour — muted at
+   rest, full ink on hover — with no per-theme icon variants to maintain. */
+.nav-ic {
+  flex-shrink: 0;
+}
+
+.nav a:hover {
+  color: var(--ink);
+  background: var(--chipbg);
+}
+
+.nav a.nav-current {
+  color: var(--ink);
+  background: var(--chipbg);
+  font-weight: 650;
+}
+
+.nav .ext {
+  opacity: 0.55;
+  font-size: 11px;
+}
+
+.nav .nav-soon {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.soon-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 600 10px var(--mono);
+  letter-spacing: 0.06em;
+  padding: 3px 8px 3px 6px;
+  border-radius: 999px;
+  background: var(--soon-bg);
+  color: var(--soon-ink);
+}
+
+.soon-dot {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
+  background: currentColor;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.soon-dot::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+  animation: soonPulse 2s ease-out infinite;
+}
+
+@keyframes soonPulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.5;
+  }
+  70%,
+  100% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+
+/* nav dropdown (YouTube) */
+.nav-dd {
+  position: relative;
+}
+
+.nav-dd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  font: 500 14px var(--sans);
+  cursor: pointer;
+  padding: 8px 11px 8px 13px;
+  border-radius: 9px;
+  white-space: nowrap;
+}
+
+.nav-dd-btn:hover,
+.nav-dd-btn[aria-expanded='true'] {
+  color: var(--ink);
+  background: var(--chipbg);
+}
+
+.nav-dd-chev {
+  transition: transform 0.15s;
+  opacity: 0.6;
+}
+
+.nav-dd-btn[aria-expanded='true'] .nav-dd-chev {
+  transform: rotate(180deg);
+}
+
+/* position:fixed, not absolute — on a phone .nav scrolls sideways, which would
+   clip an absolutely-positioned child the moment it extends past the row. */
+.nav-dd-panel {
+  position: fixed;
+  z-index: 60;
+  white-space: nowrap;
+  background: var(--card);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lift);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-dd-panel a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  color: var(--ink);
+  text-decoration: none;
+  font: 500 13.5px var(--sans);
+}
+
+.nav-dd-panel a:hover {
+  background: var(--chipbg);
+}
+
+/* account cluster + theme toggle */
+.bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.tt {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  border: 1.5px solid var(--line-strong);
+  background: var(--card);
+  color: var(--ink-soft);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.tt:hover {
+  color: var(--ink);
+  border-color: var(--ink-soft);
+}
+
+.tt .i-sun {
+  display: none;
+}
+
+:root[data-theme='dark'] .tt .i-sun {
+  display: block;
+}
+
+:root[data-theme='dark'] .tt .i-moon {
+  display: none;
 }
 
 .btn-google {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #fff;
-  border: 1px solid #dadce0;
-  border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #3c4043;
+  background: var(--card);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 11px;
+  padding: 8px 14px;
+  font: 600 13.5px var(--sans);
+  color: var(--ink);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .btn-google:hover {
-  background: #f7f8f8;
-  border-color: #c9ccd1;
+  border-color: var(--ink-soft);
+}
+
+/* ---------- account menu ---------- */
+
+.acct {
+  position: relative;
+  display: inline-flex;
+}
+
+.avatar-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  line-height: 0;
+}
+
+/* Sized to match the 38px icon buttons it sits beside, so the end of the bar
+   reads as one row of controls rather than a row plus a stray picture. */
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line-strong);
+  flex-shrink: 0;
+  object-fit: cover;
+  transition: border-color 0.15s;
+}
+
+.avatar-btn:hover .avatar,
+.avatar-btn[aria-expanded='true'] .avatar {
+  border-color: var(--ink-soft);
+}
+
+.avatar-fallback {
+  display: grid;
+  place-items: center;
+  background: var(--chipbg);
+  color: var(--ink);
+  font: 700 15px var(--display);
+  line-height: 1;
+}
+
+.acct-panel {
+  min-width: 196px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.acct-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-bottom: 1.5px solid var(--line);
+}
+
+.acct-who strong {
+  font: 650 13.5px var(--sans);
+  color: var(--ink);
+}
+
+/* An address is longer than the panel is wide far more often than a name is. */
+.acct-who span {
+  font: 400 12px var(--mono);
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.acct-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 11px 14px;
+  border: 0;
+  background: none;
+  font: 600 13.5px var(--sans);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.acct-item:hover {
+  background: var(--chipbg);
+  color: var(--bad);
+}
+
+.icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  border: 1.5px solid var(--line-strong);
+  background: var(--card);
+  color: var(--ink-soft);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover {
+  color: var(--ink);
+  border-color: var(--ink-soft);
+}
+
+.icon-btn.is-on {
+  color: var(--accent-ink);
+  border-color: var(--accent-ink);
+}
+
+/* ---------- hero ---------- */
+
+.hero {
+  padding: 74px 0 18px;
+}
+
+.eyebrow {
+  font: 600 12px/1 var(--mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 0 0 22px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  row-gap: 9px;
+}
+
+.eyebrow::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  min-width: 40px;
+  max-width: 180px;
+  background: var(--line-strong);
+}
+
+.cycle {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 3px 9px;
+  border-radius: 6px;
+  letter-spacing: 0.14em;
+}
+
+.coverage {
+  border: 1.5px solid var(--line-strong);
+  padding: 2px 9px;
+  border-radius: 6px;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.hero h1 {
+  font: 800 clamp(32px, 5.4vw, 64px) / 1.08 var(--display);
+  letter-spacing: -0.04em;
+  margin: 0;
+  /* Wider than the old headline's 20ch: this one is a longer sentence, and
+     with the stat box gone there is nothing sitting beside it to make room
+     for. Still capped, because a display line running the full 1180px is a
+     hard read. */
+  max-width: 24ch;
+  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Coloured, not highlighted: an --accent bar behind display-size text sits
+   across the descenders. Straight --accent as text is ~1.4:1 here, so this is
+   the readable end of the same family. */
+.hero h1 em {
+  font-style: normal;
+  color: var(--accent-ink);
+}
+
+/* The trailing X of Nexus X / Silicon X / Power X, picked out in amber
+   wherever the series name renders as text. */
+.brand-x {
+  color: var(--accent-ink);
+}
+
+/* A selected chip is already a solid colour fill with knocked-out text; an
+   amber letter inside it would read as a rendering glitch. */
+.chip[aria-pressed='true'] .brand-x {
+  color: inherit;
+}
+
+/* ---------- toolbar ---------- */
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 11px;
+  align-items: center;
+  padding: 34px 0 6px;
+}
+
+.search {
+  position: relative;
+  flex: 1 1 260px;
+  max-width: 400px;
+}
+
+.search input {
+  width: 100%;
+  padding: 13px 15px 13px 44px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 13px;
+  font: inherit;
+  font-size: 15px;
+  background: var(--card);
+  color: var(--ink);
+}
+
+.search input::placeholder {
+  color: var(--ink-faint);
+}
+
+.search input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 4px var(--chipbg);
+}
+
+.search svg {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  translate: 0 -50%;
+  color: var(--ink-soft);
+  pointer-events: none;
+}
+
+.kbd {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  translate: 0 -50%;
+  font: 500 10px var(--mono);
+  color: var(--ink-faint);
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  padding: 2px 6px;
+  pointer-events: none;
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  --sc: var(--brand);
+  --sc-d: var(--brand);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--card);
+  font: 600 13px var(--sans);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+.chip .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  background: var(--sc-use);
+}
+
+.chip-count {
+  font: 600 11px var(--mono);
+  opacity: 0.75;
+}
+
+.chip:hover {
+  border-color: var(--sc-use);
+  color: var(--ink);
+  transform: translateY(-1px);
+}
+
+.chip[aria-pressed='true'] {
+  background: var(--sc-use);
+  border-color: var(--sc-use);
+  color: #fff;
+}
+
+:root[data-theme='dark'] .chip[aria-pressed='true'] {
+  color: #0a1020;
+}
+
+.chip[aria-pressed='true'] .dot {
+  background: currentColor;
+}
+
+.seg {
+  display: flex;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--card);
+  margin-left: auto;
+}
+
+.seg button {
+  border: 0;
+  background: none;
+  padding: 9px 15px;
+  font: 600 13px var(--sans);
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.seg button + button {
+  border-left: 1.5px solid var(--line-strong);
+}
+
+.seg button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.result-line {
+  font: 500 12.5px var(--mono);
+  color: var(--ink-soft);
+  padding: 14px 0 0;
+  min-height: 20px;
+  margin: 0;
+}
+
+/* ---------- shelves ---------- */
+
+main {
+  padding-bottom: 60px;
+}
+
+.shelf {
+  margin: 50px 0 0;
+}
+
+.shelf-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 22px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.shelf-sq {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--sc-use);
+  margin-bottom: 5px;
+  flex-shrink: 0;
+}
+
+.shelf-head h2 {
+  font: 800 34px var(--display);
+  letter-spacing: -0.035em;
+  margin: 0;
+  line-height: 1;
+}
+
+.shelf-tagline {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+  padding-bottom: 2px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(252px, 1fr));
+  gap: 22px;
+}
+
+/* A shelf with nothing on it yet. Honest and quiet — the shelves are the map
+   of the library, so hiding an empty one makes the plan look smaller. */
+.shelf-empty {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  padding: 18px 0 22px;
+  opacity: 0.45;
+}
+
+.shelf-empty span {
+  flex: 0 0 auto;
+  width: 34px;
+  border-radius: 5px 5px 0 0;
+  background: var(--line-strong);
+}
+
+.shelf-empty span:nth-child(1) { height: 52px; }
+.shelf-empty span:nth-child(2) { height: 74px; }
+.shelf-empty span:nth-child(3) { height: 42px; }
+.shelf-empty span:nth-child(4) { height: 64px; }
+.shelf-empty span:nth-child(5) { height: 56px; }
+
+.shelf-empty-note {
+  align-self: center;
+  margin-left: 8px;
+  font: 500 13px var(--sans);
+  color: var(--ink-soft);
+  opacity: 1;
+}
+
+/* ---------- cards ---------- */
+
+.card {
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s, border-color 0.2s;
+  animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Cards lift in as the shelf paints. nth-child restarts inside every .grid, so
+   each shelf cascades on its own rather than one delay ramp running the whole
+   page — capped at 6 so no card on a long shelf is left waiting. */
+.card:nth-child(2) { animation-delay: 0.05s; }
+.card:nth-child(3) { animation-delay: 0.1s; }
+.card:nth-child(4) { animation-delay: 0.15s; }
+.card:nth-child(5) { animation-delay: 0.2s; }
+.card:nth-child(n + 6) { animation-delay: 0.25s; }
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translate(-10px, 18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-lift);
+  border-color: var(--line-strong);
+}
+
+.cover {
+  height: 215px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 20px 16px 30px;
+  color: #fff;
+  background: radial-gradient(120% 100% at 78% 4%, rgba(255, 255, 255, 0.24), transparent 58%),
+    linear-gradient(158deg, var(--cv1) 0%, var(--cv2) 100%);
+  border: 0;
+  text-align: left;
+  font: inherit;
+  width: 100%;
+  cursor: pointer;
+}
+
+.spine {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 17px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.36), rgba(0, 0, 0, 0.06) 62%, rgba(255, 255, 255, 0.2));
+}
+
+.spine::after {
+  content: '';
+  position: absolute;
+  left: 17px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.halftone {
+  position: absolute;
+  inset: 0;
+  opacity: 0.16;
+  background-image: radial-gradient(circle, #fff 1px, transparent 1.2px);
+  background-size: 11px 11px;
+}
+
+.glyph {
+  position: absolute;
+  right: -22px;
+  bottom: -38px;
+  font: 800 165px var(--display);
+  opacity: 0.13;
+  letter-spacing: -0.06em;
+  line-height: 1;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Corner mark — a second, non-colour cue for how much sits inside. */
+.qs {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  font: 800 13px var(--display);
+  background: rgba(255, 255, 255, 0.18);
+  border: 1.5px solid rgba(255, 255, 255, 0.42);
+}
+
+.cover-series {
+  font: 600 10.5px var(--mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.92;
+  position: relative;
+}
+
+/* Cover backgrounds vary per series, so there is no single accent that clears
+   4.5:1 on all of them — let the X inherit the cover's own white. */
+.cover-series .brand-x {
+  color: inherit;
+}
+
+.cover-rule {
+  width: 30px;
+  height: 2.5px;
+  background: var(--accent);
+  margin: 11px 0 12px;
+  position: relative;
+  border-radius: 2px;
+  display: block;
+}
+
+.cover-title {
+  font: 800 25px/1.13 var(--display);
+  letter-spacing: -0.03em;
+  position: relative;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* A translucent white scrim tints whatever gradient is underneath instead of
+   replacing it; the browser default (black on yellow) is unreadable on these
+   covers. */
+.cover-title mark {
+  background: rgba(255, 255, 255, 0.3);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.cover-foot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  gap: 8px;
+}
+
+.cover-brand .bm-text {
+  font-size: 12.5px;
+  opacity: 0.92;
+}
+
+/* Stays white on the gradient — the brand blue would clash per series. */
+.cover-brand .bm-text b {
+  color: inherit;
+}
+
+.cover-brand .bm-mono {
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--cv2);
+  transform: none;
+}
+
+.card-body {
+  padding: 17px 19px 19px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  flex: 1;
+}
+
+.card-kind {
+  margin: 0;
+  font: 650 15.5px/1.35 var(--display);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+/* The cover already carries the title as its big visible text, so the heading
+   is for assistive tech only — sighted users are not reading it twice. */
+.card-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.card-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  font: 400 12px var(--mono);
+  color: var(--ink-soft);
+  margin: -4px 0 0;
+}
+
+.card-meta .sep {
+  opacity: 0.4;
+}
+
+.badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  font: 600 10.5px var(--mono);
+  color: var(--ink-faint);
+  border-radius: 6px;
+  padding: 3px 8px;
+  background: var(--chipbg);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.btn {
+  flex: 1 1 auto;
+  text-align: center;
+  text-decoration: none;
+  border-radius: 11px;
+  font: 600 13.5px var(--sans);
+  padding: 11px 13px;
+  transition: 0.15s;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.btn .bi {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.btn.solid {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.btn.solid:hover {
+  transform: translateY(-1px);
+}
+
+.btn.tint {
+  background: var(--sc-tint);
+  border-color: var(--sc-edge);
+  color: var(--sc);
+}
+
+.btn.tint:hover {
+  filter: brightness(0.97);
+  transform: translateY(-1px);
+}
+
+:root[data-theme='dark'] .btn.tint {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--sc-d);
+  color: var(--sc-d);
+}
+
+:root[data-theme='dark'] .btn.tint:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.btn.ghost {
+  background: var(--card);
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.btn.ghost:hover {
+  border-color: var(--ink-soft);
+}
+
+/* ---------- drill-down (breadcrumbs + section cards) ---------- */
+
+.page-head {
+  padding: 34px 0 4px;
+}
+
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font: 500 13px var(--sans);
+  color: var(--ink-soft);
+  margin-bottom: 16px;
+}
+
+.crumbs button,
+.crumbs a {
+  background: none;
+  border: 0;
+  padding: 4px 9px;
+  border-radius: 8px;
+  font: inherit;
+  color: var(--ink-soft);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.crumbs button:hover,
+.crumbs a:hover {
+  background: var(--chipbg);
+  color: var(--ink);
+}
+
+.crumbs .crumb-now {
+  color: var(--ink);
+  font-weight: 650;
+  padding: 4px 9px;
+}
+
+.crumbs .crumb-sep {
+  opacity: 0.45;
+}
+
+.page-title {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 0 0 6px;
+}
+
+.page-title h1 {
+  font: 800 clamp(26px, 4vw, 40px) / 1.05 var(--display);
+  letter-spacing: -0.035em;
+  margin: 0;
+}
+
+.page-title .page-count {
+  font: 600 12px var(--mono);
+  color: var(--ink-soft);
+  padding-bottom: 5px;
+}
+
+.sec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: 14px;
+  margin: 26px 0 0;
+}
+
+.sec-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  text-align: left;
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-left: 4px solid var(--sc-use);
+  border-radius: 14px;
+  padding: 16px 17px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s, border-color 0.18s;
+  animation: rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.sec-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lift);
+  border-color: var(--line-strong);
+  border-left-color: var(--sc-use);
+}
+
+.sec-name {
+  font: 650 15.5px/1.3 var(--display);
+  letter-spacing: -0.01em;
+}
+
+.sec-meta {
+  font: 400 11.5px var(--mono);
+  color: var(--ink-soft);
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.sec-meta .sep {
+  opacity: 0.4;
+}
+
+.sec-card .go {
+  margin-top: 2px;
+  font: 600 12px var(--sans);
+  color: var(--sc-use);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ---------- question list ---------- */
+
+.qlist-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding-bottom: 14px;
+  margin-bottom: 4px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.qfilters {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 18px 0 6px;
+}
+
+.qfilters .seg {
+  margin-left: 0;
+}
+
+.qfilters select {
+  border: 1.5px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--ink);
+  font: 600 13px var(--sans);
+  padding: 9px 12px;
+  cursor: pointer;
+}
+
+.qlist {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+  gap: 10px;
+}
+
+.qrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--ink);
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+
+.qrow:hover {
+  border-color: var(--sc-use, var(--ink-soft));
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.qrow.is-current {
+  border-color: var(--ink);
+  background: var(--chipbg);
+}
+
+.qid {
+  font: 700 14px var(--mono);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.qrow-meta {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 400 11.5px var(--mono);
+  color: var(--ink-soft);
+}
+
+.qtype {
+  font: 600 10.5px var(--mono);
+  letter-spacing: 0.04em;
+  border-radius: 6px;
+  padding: 3px 7px;
+  background: var(--chipbg);
+  color: var(--ink-faint);
+}
+
+.qstar {
+  color: var(--accent-ink);
+}
+
+/* ---------- question viewer ---------- */
+
+.question-card {
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 26px 28px;
+  line-height: 1.75;
+  box-shadow: var(--shadow);
+}
+
+.question-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1.5px solid var(--line);
+  font: 500 12.5px var(--mono);
+  color: var(--ink-soft);
+}
+
+.question-meta strong {
+  font: 800 19px var(--display);
+  letter-spacing: -0.02em;
+  color: var(--ink);
 }
 
 .question-meta-spacer {
   flex: 1;
 }
 
-.bookmark-btn {
-  background: none;
-  border: 1px solid #d5d7db;
-  border-radius: 999px;
-  padding: 3px 12px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #555;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.bookmark-btn:hover:not(:disabled) {
-  border-color: #2456e5;
-  color: #2456e5;
-}
-
-.bookmark-btn.is-bookmarked {
-  border-color: #e0a800;
-  color: #a97800;
-  background: #fff9e6;
-}
-
-.bookmark-btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-/* Display math ($$…$$, \[…\]) is a block of its own, centred, with room to
-   breathe — and scrollable so a wide derivation cannot stretch the page. */
-.math-display {
-  display: block;
-  margin: 12px 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 2px;
-}
-
-/* KaTeX puts \tag{} in a right-aligned column; keep it from being clipped. */
-.math-display .katex-display {
-  margin: 0;
-}
-
-/* --- Previous / next within a chapter ------------------------------------ */
-
-.question-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-/* Holds the slot open at the first and last question, so the counter stays
-   centred instead of jumping sideways. */
-.nav-spacer {
-  flex: 0 0 auto;
-  width: 1px;
-}
-
-.nav-btn {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  padding: 10px 16px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #2456e5;
-  cursor: pointer;
-}
-
-.nav-btn:hover {
-  border-color: #2456e5;
-}
-
-.nav-hint {
-  font-weight: 400;
-  font-size: 0.85rem;
-  color: #888;
-}
-
-.nav-position {
-  white-space: nowrap;
-}
-
-@media (max-width: 520px) {
-  .nav-hint {
-    display: none;
-  }
-}
-
-/* --- Notification bell ---------------------------------------------------- */
-
-.bell-wrap {
-  position: relative;
-  display: inline-flex;
-}
-
-.bell-btn {
-  position: relative;
-  background: none;
-  border: none;
-  font-size: 1.05rem;
-  line-height: 1;
-  padding: 4px 6px;
-  cursor: pointer;
-}
-
-.bell-badge {
-  position: absolute;
-  top: -2px;
-  right: -4px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 999px;
-  background: #b3261e;
-  color: #fff;
-  font-size: 0.68rem;
-  font-weight: 700;
-  line-height: 16px;
-  text-align: center;
-}
-
-.bell-panel {
-  position: absolute;
-  top: 30px;
-  right: 0;
-  z-index: 20;
-  width: min(360px, calc(100vw - 32px));
-  max-height: 420px;
-  overflow-y: auto;
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
-  text-align: left;
-}
-
-.bell-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 12px 14px;
-  border-bottom: 1px solid #eceef0;
-}
-
-.bell-empty {
-  padding: 16px 14px;
-  margin: 0;
-}
-
-.bell-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.bell-list li {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 11px 14px;
-  border-bottom: 1px solid #f2f3f5;
-}
-
-.bell-list li.is-linked {
-  cursor: pointer;
-}
-
-.bell-list li.is-linked:hover {
-  background: #f5f7fb;
-}
-
-/* Unread is marked with a rail rather than a heavy background, so a full
-   panel does not become a wall of colour. */
-.bell-list li.is-unread {
-  box-shadow: inset 3px 0 0 #2456e5;
-}
-
-.bell-icon {
-  font-size: 0.95rem;
-  line-height: 1.4;
-}
-
-.bell-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.bell-q {
-  font-size: 0.8rem;
-  color: #2456e5;
-  font-weight: 600;
-  margin-top: 2px;
-}
-
-.bell-dismiss {
-  background: none;
-  border: none;
-  color: #aaa;
-  font-size: 1.1rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0 2px;
-}
-
-.bell-dismiss:hover {
-  color: #b3261e;
-}
-
-/* --- Rate question -------------------------------------------------------- */
-
-.rate-question {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0 0 16px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid #eceef0;
-  font-size: 0.85rem;
-}
-
-.rate-label {
-  font-weight: 600;
-  color: #555;
-  margin-right: 2px;
-}
-
-.rate-btn {
-  background: none;
-  border: 1px solid #d5d7db;
-  border-radius: 999px;
-  padding: 3px 14px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #666;
-  cursor: pointer;
-}
-
-.rate-btn:hover:not(:disabled) {
-  border-color: #2456e5;
-  color: #2456e5;
-}
-
-/* Chosen level is colour-coded, so a glance says how hard you found it. */
-.rate-btn.is-chosen.rate-easy {
-  background: #dff3e4;
-  border-color: #1d6b33;
-  color: #1d6b33;
-}
-
-.rate-btn.is-chosen.rate-medium {
-  background: #fdeccf;
-  border-color: #8a5300;
-  color: #8a5300;
-}
-
-.rate-btn.is-chosen.rate-hard {
-  background: #fde2e1;
-  border-color: #b3261e;
-  color: #b3261e;
-}
-
-.rate-btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-/* --- Report / request actions -------------------------------------------- */
-
-.question-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px solid #eceef0;
-  font-size: 0.85rem;
-}
-
-.action-slot {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.action-btn {
-  background: none;
-  border: 1px solid #d5d7db;
-  border-radius: 999px;
-  padding: 3px 12px;
-  font-size: 0.85rem;
-  color: #666;
-  cursor: pointer;
-}
-
-.action-btn:hover:not(:disabled) {
-  border-color: #b3261e;
-  color: #b3261e;
-}
-
-.action-btn.is-filed {
-  border-color: #b3261e;
-  color: #b3261e;
-  background: #fdf1f0;
-}
-
-.action-btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.report-form {
-  flex-basis: 100%;
-  background: #fafbfc;
-  border: 1px solid #e6e7ea;
-  border-radius: 10px;
-  padding: 12px 14px;
-}
-
-.report-form label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: #333;
-}
-
-.report-form textarea {
-  width: 100%;
-  box-sizing: border-box;
-  border: 1px solid #d5d7db;
-  border-radius: 8px;
-  padding: 8px 10px;
-  font: inherit;
-  font-size: 0.9rem;
-  resize: vertical;
-}
-
-.report-form-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 8px;
-}
-
-.btn-primary {
-  background: #2456e5;
-  border: 1px solid #2456e5;
-  border-radius: 999px;
-  color: #fff;
-  font-weight: 600;
-  font-size: 0.85rem;
-  padding: 5px 16px;
-  cursor: pointer;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #1c46bd;
-}
-
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.btn-danger {
-  background: none;
-  border: 1px solid #b3261e;
-  border-radius: 999px;
-  color: #b3261e;
-  font-weight: 600;
-  font-size: 0.85rem;
-  padding: 5px 16px;
-  cursor: pointer;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: #fde2e1;
-}
-
-.btn-danger:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-/* Each action gets its own line when signed out, so the prompt names the
-   action it belongs to rather than listing them all in one sentence. */
-.signin-prompt {
-  flex-basis: 100%;
-}
-
-.bookmark-subject {
-  margin-bottom: 28px;
-}
-
-.bookmark-subject h2 {
-  font-size: 1.05rem;
-  margin: 0 0 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid #e0e0e0;
-  color: #444;
-}
-
-.bookmark-group {
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  padding: 12px 16px;
-  margin-bottom: 8px;
-}
-
-/* The same trail you would have followed through the tree to reach these
-   questions: Domain > Branch > Chapter, Chapter > Branch, or Year > Session. */
-.bookmark-path {
-  font-size: 0.9rem;
-  color: #444;
-  margin-bottom: 8px;
-}
-
-.crumb-sep {
-  color: #aaa;
-}
-
-.bookmark-questions {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.bookmark-questions li {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  border: 1px solid #e6e7ea;
-  border-radius: 999px;
-  padding: 4px 12px;
-  background: #fafbfc;
-}
-
-.bookmark-questions a {
-  color: #2456e5;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.bookmark-questions .remove {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #999;
-}
-
-.bookmark-questions .remove:hover {
-  color: #b3261e;
-}
-
-.tile {
-  display: block;
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  padding: 16px;
-  text-align: left;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: inherit;
-  text-decoration: none;
-}
-
-.tile:hover {
-  border-color: #2456e5;
-}
-
-.tile.leaf {
-  border-left: 4px solid #2456e5;
-}
-
-.question-tile {
-  text-align: center;
-  font-size: 1.1rem;
-}
-
-.question-card {
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  padding: 20px;
-  line-height: 1.7;
-}
-
-.question-meta {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 16px;
-  font-size: 0.9rem;
-  color: #444;
-}
-
 .question-body {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .common-data {
-  background: #eef2ff;
-  border: 1px solid #c7d2fe;
-  border-radius: 8px;
-  padding: 12px 14px;
-  margin-bottom: 16px;
+  background: var(--chipbg);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
 }
 
 .common-data-label {
-  font-weight: 700;
-  font-size: 0.8rem;
+  font: 700 10.5px var(--mono);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #4338ca;
-  margin-bottom: 6px;
+  letter-spacing: 0.1em;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
 }
 
 .question-image {
   display: block;
-  max-width: 60%;
+  max-width: min(100%, 460px);
   height: auto;
-  margin: 12px 0;
-  border-radius: 6px;
+  margin: 14px 0;
+  border-radius: 8px;
 }
 
 /* Wide tables (truth tables especially) scroll inside their own box rather
@@ -659,11 +1496,25 @@ button.link {
 }
 
 .question-table td {
-  border: 1px solid #c9ccd4;
-  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  padding: 7px 13px;
   text-align: center;
   vertical-align: middle;
   white-space: nowrap;
+}
+
+/* Display math is a block of its own, centred, and scrollable so a wide
+   derivation cannot stretch the page. */
+.math-display {
+  display: block;
+  margin: 14px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+}
+
+.math-display .katex-display {
+  margin: 0;
 }
 
 .options {
@@ -673,14 +1524,15 @@ button.link {
 }
 
 .option {
-  padding: 10px 12px;
-  background: #f7f8fa;
-  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--paper);
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
 }
 
 .option-image {
   display: inline-block;
-  max-width: 30%;
+  max-width: 40%;
   vertical-align: middle;
   border-radius: 4px;
   margin: 4px 0;
@@ -706,16 +1558,27 @@ button.link {
   margin-right: 6px;
 }
 
-.solution {
+.answer {
   margin-top: 20px;
-  border-top: 1px solid #e0e0e0;
-  padding-top: 14px;
+  font-size: 0.95rem;
+}
+
+.answer summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--brand);
+}
+
+.solution {
+  margin-top: 22px;
+  border-top: 1.5px solid var(--line);
+  padding-top: 16px;
 }
 
 .solution > summary {
   cursor: pointer;
-  font-weight: 700;
-  color: #1f7a4d;
+  font: 700 14px var(--sans);
+  color: var(--ok);
 }
 
 .solution-meta {
@@ -724,8 +1587,8 @@ button.link {
   gap: 16px;
   flex-wrap: wrap;
   margin: 12px 0;
-  font-size: 0.85rem;
-  color: #555;
+  font: 500 12px var(--mono);
+  color: var(--ink-soft);
 }
 
 .difficulty {
@@ -733,7 +1596,7 @@ button.link {
 }
 
 .video-link {
-  color: #0d7a6f;
+  color: var(--ok);
   font-weight: 600;
   text-decoration: none;
 }
@@ -750,7 +1613,7 @@ button.link {
   max-width: 680px;
   aspect-ratio: 16 / 9;
   margin: 0 0 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
   background: #000;
 }
@@ -764,119 +1627,726 @@ button.link {
 }
 
 .solution-body {
-  line-height: 1.7;
+  line-height: 1.75;
 }
 
 .sol-block {
-  border-left: 3px solid #c9ccd4;
-  background: #f7f8fa;
-  border-radius: 0 8px 8px 0;
-  padding: 10px 14px;
+  border-left: 3px solid var(--line-strong);
+  background: var(--paper);
+  border-radius: 0 10px 10px 0;
+  padding: 12px 16px;
   margin: 14px 0;
 }
 
 .sol-block-title {
-  font-weight: 700;
-  font-size: 0.78rem;
+  font: 700 10.5px var(--mono);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.09em;
   margin-bottom: 6px;
-  color: #444;
+  color: var(--ink-soft);
 }
 
 .sol-method {
-  border-left-color: #2456e5;
+  border-left-color: var(--brand);
 }
 .sol-method .sol-block-title {
-  color: #2456e5;
+  color: var(--brand);
 }
 
 .sol-keypoints {
-  border-left-color: #1f7a4d;
+  border-left-color: var(--ok);
 }
 .sol-keypoints .sol-block-title {
-  color: #1f7a4d;
+  color: var(--ok);
 }
 
 .sol-mistakes {
-  border-left-color: #b3261e;
+  border-left-color: var(--bad);
 }
 .sol-mistakes .sol-block-title {
-  color: #b3261e;
+  color: var(--bad);
 }
 
-.answer {
-  margin-top: 20px;
-  font-size: 0.95rem;
+/* ---------- previous / next within a section ---------- */
+
+.question-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
 }
 
-.answer summary {
+/* Holds the slot open at the first and last question, so the counter stays
+   centred instead of jumping sideways. */
+.nav-spacer {
+  flex: 0 0 auto;
+  width: 1px;
+}
+
+.nav-btn {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  background: var(--card);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 11px;
+  padding: 11px 16px;
+  font: 600 13.5px var(--sans);
+  color: var(--ink);
   cursor: pointer;
-  font-weight: 600;
-  color: #2456e5;
 }
 
-@media (prefers-color-scheme: dark) {
-  body {
-    background: #16181d;
-    color: #e6e6e6;
+.nav-btn:hover {
+  border-color: var(--ink);
+}
+
+.nav-hint {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.nav-position {
+  white-space: nowrap;
+  font: 500 12px var(--mono);
+  color: var(--ink-soft);
+}
+
+/* ---------- pills: bookmark / rate / report ---------- */
+
+.pill {
+  background: var(--card);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font: 600 12.5px var(--sans);
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pill:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.pill:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* .bookmark-btn / .rate-btn / .action-btn all carry `pill` alongside their own
+   class, so only their selected/filed states need declaring here. */
+.bookmark-btn.is-bookmarked {
+  border-color: var(--accent-ink);
+  color: var(--accent-ink);
+  background: var(--soon-bg);
+}
+
+.rate-question {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding-bottom: 14px;
+  border-bottom: 1.5px solid var(--line);
+  font-size: 0.85rem;
+}
+
+.rate-label {
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-right: 2px;
+}
+
+/* Chosen level is colour-coded, so a glance says how hard you found it. */
+.rate-btn.is-chosen.rate-easy {
+  background: color-mix(in srgb, var(--ok) 16%, transparent);
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.rate-btn.is-chosen.rate-medium {
+  background: color-mix(in srgb, var(--warn) 16%, transparent);
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.rate-btn.is-chosen.rate-hard {
+  background: var(--bad-bg);
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+.question-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1.5px solid var(--line);
+  font-size: 0.85rem;
+}
+
+.action-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-btn:hover:not(:disabled) {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+.action-btn.is-filed {
+  border-color: var(--bad);
+  color: var(--bad);
+  background: var(--bad-bg);
+}
+
+.report-form {
+  flex-basis: 100%;
+  background: var(--paper);
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.report-form label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--ink);
+}
+
+.report-form textarea {
+  width: 100%;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 9px 11px;
+  font: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+  background: var(--card);
+  color: var(--ink);
+}
+
+.report-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.btn-primary {
+  background: var(--ink);
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  color: var(--on-ink);
+  font: 600 12.5px var(--sans);
+  padding: 6px 17px;
+  cursor: pointer;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn-danger {
+  background: none;
+  border: 1.5px solid var(--bad);
+  border-radius: 999px;
+  color: var(--bad);
+  font: 600 12.5px var(--sans);
+  padding: 6px 17px;
+  cursor: pointer;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--bad-bg);
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Each action gets its own line when signed out, so the prompt names the
+   action it belongs to rather than listing them all in one sentence. */
+.signin-prompt {
+  flex-basis: 100%;
+}
+
+/* ---------- notification bell ---------- */
+
+.bell-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.bell-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--bad);
+  color: #fff;
+  font: 700 10px var(--mono);
+  line-height: 17px;
+  text-align: center;
+}
+
+.bell-panel {
+  position: absolute;
+  top: 46px;
+  right: 0;
+  z-index: 60;
+  width: min(360px, calc(100vw - 32px));
+  max-height: 420px;
+  overflow-y: auto;
+  background: var(--card);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lift);
+  text-align: left;
+}
+
+.bell-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 13px 15px;
+  border-bottom: 1.5px solid var(--line);
+  font-weight: 650;
+}
+
+.bell-empty {
+  padding: 16px 15px;
+  margin: 0;
+}
+
+.bell-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bell-list li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--line);
+}
+
+.bell-list li.is-linked {
+  cursor: pointer;
+}
+
+.bell-list li.is-linked:hover {
+  background: var(--chipbg);
+}
+
+/* Unread is marked with a rail rather than a heavy background, so a full panel
+   does not become a wall of colour. */
+.bell-list li.is-unread {
+  box-shadow: inset 3px 0 0 var(--brand);
+}
+
+.bell-icon {
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.bell-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.bell-q {
+  font-size: 0.8rem;
+  color: var(--brand);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.bell-dismiss {
+  background: none;
+  border: none;
+  color: var(--ink-faint);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.bell-dismiss:hover {
+  color: var(--bad);
+}
+
+/* ---------- bookmarks page ---------- */
+
+.bookmark-subject {
+  margin-bottom: 30px;
+}
+
+.bookmark-subject h2 {
+  font: 800 20px var(--display);
+  letter-spacing: -0.02em;
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.bookmark-group {
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 17px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow);
+}
+
+/* The same trail you would have followed through the tree to reach these
+   questions: Domain > Branch > Chapter, Chapter > Branch, or Year > Session. */
+.bookmark-path {
+  font: 500 13px var(--sans);
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+}
+
+.crumb-sep {
+  opacity: 0.45;
+}
+
+.bookmark-questions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bookmark-questions li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 4px 13px;
+  background: var(--paper);
+}
+
+.bookmark-questions a {
+  color: var(--ink);
+  font: 600 13px var(--mono);
+  text-decoration: none;
+}
+
+.bookmark-questions .remove {
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+}
+
+.bookmark-questions .remove:hover {
+  color: var(--bad);
+}
+
+/* ---------- empty state / loading / footer ---------- */
+
+.empty {
+  text-align: center;
+  padding: 64px 20px;
+  color: var(--ink-soft);
+}
+
+.empty h3 {
+  font: 800 22px var(--display);
+  color: var(--ink);
+  margin: 0 0 6px;
+}
+
+.empty button {
+  margin-top: 14px;
+  border: 0;
+  background: var(--ink);
+  color: var(--on-ink);
+  border-radius: 10px;
+  padding: 10px 20px;
+  font: 600 13.5px var(--sans);
+  cursor: pointer;
+}
+
+/* Placeholder cards while the library loads — same footprint as the real
+   thing, so nothing jumps when the data lands. */
+.skeleton {
+  border-radius: var(--radius);
+  background: linear-gradient(100deg, var(--chipbg) 30%, var(--line) 50%, var(--chipbg) 70%);
+  background-size: 240% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  height: 340px;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 140% 0;
   }
-  .tile,
+  to {
+    background-position: -40% 0;
+  }
+}
+
+footer {
+  border-top: 1.5px solid var(--line);
+  background: var(--card);
+  margin-top: 24px;
+}
+
+.footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 34px 24px;
+  max-width: 1180px;
+  margin: 0 auto;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+}
+
+.footer-inner p {
+  margin: 0;
+}
+
+/* ---------- responsive: laptop -> tablet -> phone -> small phone ---------- */
+
+@media (max-width: 1000px) {
+  .hero {
+    padding-top: 56px;
+  }
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 18px;
+  }
+}
+
+@media (max-width: 860px) {
+  .hero h1 {
+    max-width: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .wrap,
+  .bar-in,
+  .footer-inner {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  /* Hiding navigation is not a responsive fix — it makes the mobile site a
+     different product. The nav drops to its own full-width row and scrolls
+     sideways instead, the same pattern .chips uses further down. */
+  .bar-in {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .nav {
+    order: 3;
+    flex-basis: 100%;
+    margin-left: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .nav::-webkit-scrollbar {
+    display: none;
+  }
+  .nav a,
+  .nav .nav-soon,
+  .nav-dd {
+    flex: 0 0 auto;
+  }
+  .nav a,
+  .nav .nav-soon,
+  .nav-dd-btn {
+    font-size: 13px;
+    padding: 7px 11px;
+  }
+  .bar-actions {
+    margin-left: auto;
+  }
+  .hero {
+    padding-top: 40px;
+  }
+  /* The coverage pill is a full sentence now — at this width it is wider than
+     the viewport, and nowrap would push the whole page sideways rather than
+     clip. Wrapping inside the pill keeps it a pill and keeps the body from
+     scrolling horizontally. */
+  .coverage {
+    white-space: normal;
+  }
+  .search {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+  .search input {
+    font-size: 16px; /* 16px stops iOS Safari zooming on focus */
+  }
+  .kbd {
+    display: none;
+  }
+  .chips {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .chips::-webkit-scrollbar {
+    display: none;
+  }
+  .chip {
+    flex: 0 0 auto;
+  }
+  .seg {
+    margin-left: 0;
+    width: 100%;
+  }
+  .seg button {
+    flex: 1;
+  }
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 13px;
+  }
+  .cover {
+    height: 176px;
+    padding: 15px 15px 13px 24px;
+  }
+  .cover-title {
+    font-size: 17.5px;
+  }
+  .glyph {
+    font-size: 112px;
+  }
+  .qs {
+    min-width: 26px;
+    height: 26px;
+    font-size: 11.5px;
+    top: 12px;
+    right: 12px;
+  }
+  .shelf-head h2 {
+    font-size: 26px;
+  }
+  .shelf-head {
+    gap: 11px;
+  }
+  .shelf-tagline {
+    display: none;
+  }
+  .card-body {
+    padding: 14px 15px 16px;
+    gap: 9px;
+  }
+  .cover-brand .bm-text {
+    font-size: 11px;
+  }
+  /* A full subject list is fine at desktop card width, but the 2-up mobile
+     grid makes it wrap across several lines and dominate the card. */
+  .card-kind {
+    font-size: 12.5px;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+  .sec-grid,
+  .qlist {
+    grid-template-columns: 1fr;
+  }
   .question-card {
-    background: #1f222a;
-    border-color: #2c2f38;
+    padding: 20px 18px;
   }
-  .option {
-    background: #262933;
+}
+
+@media (max-width: 420px) {
+  .hero h1 {
+    font-size: 33px;
   }
-  .question-table td {
-    border-color: #3a3d47;
+  .grid {
+    gap: 11px;
   }
-  .solution {
-    border-top-color: #2c2f38;
+  .cover {
+    height: 150px;
+    padding: 13px 13px 11px 21px;
   }
-  .solution > summary {
-    color: #4ade80;
+  .cover-title {
+    font-size: 15.5px;
+    -webkit-line-clamp: 2;
   }
-  .solution-meta {
-    color: #aaa;
+  .glyph {
+    font-size: 92px;
   }
-  .sol-block {
-    background: #22252e;
-    border-left-color: #3a3d47;
+  .card-meta {
+    font-size: 11px;
   }
-  .sol-block-title {
-    color: #ccc;
+  .btn {
+    font-size: 12.5px;
+    padding: 10px 9px;
   }
-  .sol-method {
-    border-left-color: #5b82f5;
+  .nav-hint {
+    display: none;
   }
-  .sol-method .sol-block-title {
-    color: #8fa9f8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
-  .sol-keypoints {
-    border-left-color: #3fa877;
+  .card,
+  .card:hover,
+  .sec-card,
+  .sec-card:hover,
+  .chip:hover,
+  .qrow:hover,
+  .btn:hover {
+    transition: none;
+    transform: none;
   }
-  .sol-keypoints .sol-block-title {
-    color: #6ed3a3;
+  /* opacity:1 is not optional — the rise animation starts a card at zero, so
+     killing the animation without restoring it hides the shelf. */
+  .card,
+  .sec-card,
+  .hero h1 {
+    animation: none;
+    opacity: 1;
   }
-  .sol-mistakes {
-    border-left-color: #e0645c;
+  .soon-dot::after,
+  .skeleton {
+    animation: none;
   }
-  .sol-mistakes .sol-block-title {
-    color: #ff8a80;
-  }
-  .video-link {
-    color: #4fd1c5;
-  }
-  .common-data {
-    background: #1e2340;
-    border-color: #3730a3;
-  }
-  .common-data-label {
-    color: #a5b4fc;
-  }
-  .question-meta {
-    color: #aaa;
+}
+
+@media print {
+  .bar,
+  .tools,
+  .tt,
+  .result-line,
+  .question-nav,
+  .question-actions,
+  footer {
+    display: none;
   }
 }
