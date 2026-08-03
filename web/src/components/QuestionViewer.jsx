@@ -25,11 +25,23 @@ const IMAGE_MACRO = /\\QuestionFigure(?:NoNumber)?(?:\[[^\]]*\])?\{[^{}]+\}/g;
 const MATH_PATTERN =
   /(?<!\\)\$\$([\s\S]*?)(?<!\\)\$\$|(?<!\\)\\\[([\s\S]*?)(?<!\\)\\\]|(?<!\\)\$([^$]*?)(?<!\\)\$|(?<!\\)\\\(([\s\S]*?)(?<!\\)\\\)/g;
 
-// A literal dollar reaches us as \$ (still escaped, from raw LaTeX) or as a
-// bare $ (the tokenizer unescapes it in body text). Only the former needs
-// unescaping for display.
-function unescapeDollars(text) {
-  return text.replace(/\\\$/g, '$');
+// LaTeX escapes for literal characters: \& \% \_ \# \$ \{ \} and friends. The
+// server tokenizer already resolves these in question BODY text — anything
+// after a backslash that is not a letter is a literal character, see
+// parseInlineContent in parsing/texTokenizer.js — which is why a table cell
+// reading "Power \& fuel" prints an ampersand. Options and \item labels never
+// go through that pass (they are stored raw and parsed here), so without this
+// the identical source printed "Power \& fuel" verbatim in an option while
+// rendering correctly two lines above it in the body.
+//
+// The \\ alternative matches first so LaTeX's own line break is consumed as a
+// unit: without it, "\\&" would be read as a backslash followed by an escaped
+// ampersand. Deliberately mirrors the tokenizer's rule rather than listing
+// characters, so the two paths cannot drift.
+function unescapeLatexText(text) {
+  return text.replace(/\\\\|\\([^A-Za-z*])/g, (match, literal) =>
+    literal === undefined ? match : literal
+  );
 }
 
 // Options and \item[...] labels are stored as raw LaTeX (not pre-tokenized
@@ -45,7 +57,7 @@ function renderInlineText(text, keyPrefix) {
   while ((match = pattern.exec(text)) !== null) {
     if (match.index > pos) {
       nodes.push(
-        <span key={`${keyPrefix}-t${idx}`}>{unescapeDollars(text.slice(pos, match.index))}</span>
+        <span key={`${keyPrefix}-t${idx}`}>{unescapeLatexText(text.slice(pos, match.index))}</span>
       );
     }
     // Which group matched tells us both the expression and, because the two
@@ -57,7 +69,7 @@ function renderInlineText(text, keyPrefix) {
     idx += 1;
   }
   if (pos < text.length) {
-    nodes.push(<span key={`${keyPrefix}-tail`}>{unescapeDollars(text.slice(pos))}</span>);
+    nodes.push(<span key={`${keyPrefix}-tail`}>{unescapeLatexText(text.slice(pos))}</span>);
   }
   return nodes;
 }
