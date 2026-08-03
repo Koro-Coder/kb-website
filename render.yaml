@@ -1,0 +1,75 @@
+# Render Blueprint for the public PrepFusion site.
+#
+# One web service: the Express server also serves the built React SPA out of
+# web/dist, so there is nothing to deploy separately as a static site.
+#
+# Nothing secret belongs in this file — it is committed. `sync: false` declares
+# that a variable exists but keeps its value in the Render dashboard only.
+
+services:
+  - type: web
+    name: kb-website
+    runtime: node
+    plan: free
+    region: singapore
+    branch: main
+
+    # devDependencies must be installed explicitly: Render sets
+    # NODE_ENV=production, which makes npm skip them, and vite lives there.
+    buildCommand: npm install && npm install --prefix web --include=dev && npm run build --prefix web
+    startCommand: npm start
+
+    # Reports the Mongo connection, so a deploy with a bad MONGODB_URI is
+    # rolled back instead of going live and 500ing every request.
+    healthCheckPath: /health
+
+    envVars:
+      # Turns on secure cookies, and makes a missing AUTH_JWT_SECRET fail at
+      # startup rather than silently rotating on every restart.
+      - key: NODE_ENV
+        value: production
+
+      # This app's own signing key, not a third-party credential, so Render
+      # generating it is fine. It is generated once and then held; changing it
+      # signs everyone out.
+      - key: AUTH_JWT_SECRET
+        generateValue: true
+
+      # Both must be this service's own public origin, including the scheme:
+      # https://<service>.onrender.com — Render cannot fill that in for us, as
+      # its service references yield a bare hostname with no https:// prefix.
+      #
+      # API_BASE_URL is what keeps the Google redirect_uri correct: the app does
+      # not trust the proxy, so without this it would derive "http://" from
+      # req.protocol and Google would reject the callback as unregistered.
+      #
+      # Until both are set, browsing works normally and only sign-in is
+      # unavailable, so it is safe to fill them in after the first deploy.
+      - key: APP_URL
+        sync: false
+      - key: API_BASE_URL
+        sync: false
+
+      # Use the mongodb+srv:// form here. The pinned-shard-host workaround in
+      # the local .env exists only because this machine's DNS cannot do SRV
+      # lookups; those hostnames break when Atlas rescales the cluster.
+      # Atlas Network Access must allow 0.0.0.0/0 — the free plan has no static
+      # outbound IP.
+      - key: MONGODB_URI
+        sync: false
+
+      # Not a secret, and kb-ingest must point at the same database: it writes
+      # the catalog that this site reads.
+      - key: MONGODB_DB
+        value: prepfusion_kb
+
+      # Authorised redirect URI to add in the Google console:
+      # https://<service>.onrender.com/api/auth/google/callback
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_SECRET
+        sync: false
+
+      # Reads question sources and assets from the GitHub repos.
+      - key: GITHUB_TOKEN
+        sync: false
