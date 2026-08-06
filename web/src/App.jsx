@@ -11,6 +11,7 @@ import QuestionList from './components/QuestionList.jsx';
 import QuestionViewer from './components/QuestionViewer.jsx';
 import QuestionNav from './components/QuestionNav.jsx';
 import BookmarksPage from './components/BookmarksPage.jsx';
+import UsernameGate from './components/UsernameGate.jsx';
 
 // The subject's display name without a round trip: the server sends one, but
 // only the landing page fetches the whole library. Every other page can name
@@ -40,12 +41,21 @@ function nodeMatches(subject, node, term) {
   return haystack.includes(term);
 }
 
+// The wrapper around {children} is what pins the footer to the bottom of the
+// window on a short page: #root is a min-height:100dvh column and this is the
+// element that grows to fill it. Without it the footer sat directly under the
+// content, so collapsing every subject on the bookmarks page pulled it up into
+// the middle of the screen with empty space beneath.
 function Page({ children }) {
   return (
     <>
       <SiteHeader />
-      {children}
+      <div className="page-body">{children}</div>
       <SiteFooter />
+      {/* Renders nothing unless a signed-in account has no username yet, so it
+          costs every other page nothing. Mounted here rather than per route so
+          the step cannot be skipped by deep-linking past it. */}
+      <UsernameGate />
     </>
   );
 }

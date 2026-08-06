@@ -532,6 +532,13 @@ button.link:hover {
   color: var(--ink);
 }
 
+/* Scoped through .acct-who so it outranks the muted `.acct-who span` rule
+   below on specificity rather than with !important. */
+.acct-who .acct-username {
+  color: var(--wordmark);
+  font-weight: 600;
+}
+
 /* An address is longer than the panel is wide far more often than a name is. */
 .acct-who span {
   font: 400 12px var(--mono);
@@ -810,6 +817,26 @@ button.link:hover {
 }
 
 /* ---------- shelves ---------- */
+
+/* Sticky footer. Every route renders header + .page-body + footer into #root,
+   so making that a full-height column and letting the middle child grow keeps
+   the footer against the bottom of the window whenever the content is shorter
+   than the viewport — instead of it riding up the screen as a page gets
+   shorter (collapsing the bookmark accordion, filtering a shelf to nothing).
+   dvh, not vh: on mobile browsers vh counts the space behind the collapsing
+   address bar, which would push the footer just off-screen. */
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* 1 0 auto, not `flex: 1`: the shorthand's flex-shrink would let a long page
+   compress instead of scrolling. */
+.page-body {
+  flex: 1 0 auto;
+}
 
 main {
   padding-bottom: 60px;
@@ -1258,6 +1285,14 @@ main {
   margin: 0;
 }
 
+/* Scoped to the bookmarks page rather than widened on .page-title itself: the
+   subject pages follow their title with a description that carries its own
+   leading, whereas here the first accordion heading sat almost against the
+   title's descenders. */
+.bookmarks-title {
+  margin-bottom: 24px;
+}
+
 .page-title .page-count {
   font: 600 12px var(--mono);
   color: var(--ink-soft);
@@ -1515,6 +1550,36 @@ main {
 
 .math-display .katex-display {
   margin: 0;
+}
+
+/* Attribution mark between the question and its options — see the note in
+   QuestionViewer.jsx. Muted rather than full ink so it reads as a mark on the
+   page instead of a line of content, and unselectable so it never lands in a
+   copy-paste of the question. .question-body already carries 18px below it,
+   so this only needs to close the gap to the options. */
+.question-watermark {
+  display: flex;
+  justify-content: flex-start;
+  margin: -6px 0 12px;
+  opacity: 0.55;
+  user-select: none;
+  pointer-events: none;
+}
+
+.question-watermark .bm {
+  gap: 7px;
+}
+
+.question-watermark .bm-mono {
+  width: 21px;
+  height: 21px;
+  border-radius: 6px;
+  font-size: 11.5px;
+}
+
+.question-watermark .bm-text {
+  font-size: 14px;
+  letter-spacing: -0.015em;
 }
 
 .options {
@@ -2006,6 +2071,44 @@ main {
   border-bottom: 2px solid var(--ink);
 }
 
+/* The whole heading row is the toggle, not just the chevron — a 14px arrow is
+   a poor target on a phone, and there is nothing else on the row to click. */
+.bookmark-subject-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bookmark-subject-head:hover {
+  color: var(--brand);
+}
+
+.bookmark-chev {
+  flex-shrink: 0;
+  opacity: 0.55;
+  transition: transform 0.15s;
+}
+
+.bookmark-subject-head[aria-expanded='true'] .bookmark-chev {
+  transform: rotate(90deg);
+}
+
+/* Pushed to the far end so the counts line up down the page, which is what
+   makes a collapsed list scannable. */
+.bookmark-subject-count {
+  margin-left: auto;
+  font: 500 12px var(--mono);
+  color: var(--ink-soft);
+}
+
 .bookmark-group {
   background: var(--card);
   border: 1.5px solid var(--line);
@@ -2052,13 +2155,116 @@ main {
   text-decoration: none;
 }
 
+/* An × rather than the word "Remove": the word was longer than the question id
+   it sat beside, so a row of chips read as a row of Removes. Sized past the
+   11px glyph so the tap target stays finger-sized. */
 .bookmark-questions .remove {
-  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  width: 20px;
+  height: 20px;
+  margin-right: -5px;
+  border-radius: 50%;
   color: var(--ink-faint);
 }
 
 .bookmark-questions .remove:hover {
+  background: var(--bad-bg);
   color: var(--bad);
+  text-decoration: none;
+}
+
+/* ---------- username gate ---------- */
+/* Covers the whole viewport because choosing a username is required, not
+   offered — there is no dismiss and nothing behind it is meant to be usable. */
+
+.username-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  overflow-y: auto;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.username-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--card);
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lift);
+  padding: 30px 28px 24px;
+  text-align: center;
+}
+
+.username-card h2 {
+  font: 800 24px var(--display);
+  letter-spacing: -0.03em;
+  margin: 18px 0 8px;
+}
+
+.username-card > .muted {
+  margin: 0 0 20px;
+  font-size: 0.92rem;
+}
+
+.username-card form {
+  text-align: left;
+}
+
+.username-card label {
+  display: block;
+  font: 600 12px var(--sans);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+
+.username-card input {
+  width: 100%;
+  font: 600 17px var(--mono);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.username-card input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 4px var(--chipbg);
+}
+
+/* One line that is always present, so the card never changes height as the
+   message switches between the hint, availability and an error. */
+.username-hint {
+  min-height: 20px;
+  margin: 8px 0 16px;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.username-hint.is-bad {
+  color: var(--bad);
+}
+
+.username-card .btn-primary {
+  width: 100%;
+  padding: 12px;
+  font-size: 15px;
+}
+
+.username-escape {
+  margin: 18px 0 0;
+  text-align: center;
 }
 
 /* ---------- empty state / loading / footer ---------- */
@@ -2126,6 +2332,35 @@ footer {
 
 .footer-inner p {
   margin: 0;
+}
+
+/* Dedicated classes rather than a bare ".footer-inner a" — the footer also
+   holds .logo, which sets its own colour at the same (0, 1, 0) specificity,
+   so an element selector here would need only one more class to outrank and
+   silently override it. */
+/* Outlined pills, not bare text links: sitting next to the copyright line, a
+   plain link read as part of that sentence, since nothing at rest marked it
+   as clickable. */
+.footer-link,
+.feedback-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  text-decoration: none;
+  color: var(--ink);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 9px 15px;
+  font-weight: 650;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: border-color 0.18s, transform 0.18s;
+}
+
+.footer-link:hover,
+.feedback-btn:hover {
+  border-color: var(--ink);
+  transform: translateY(-1px);
 }
 
 /* ---------- responsive: laptop -> tablet -> phone -> small phone ---------- */
@@ -2321,7 +2556,11 @@ footer {
   .sec-card:hover,
   .chip:hover,
   .qrow:hover,
-  .btn:hover {
+  .btn:hover,
+  .footer-link,
+  .footer-link:hover,
+  .feedback-btn,
+  .feedback-btn:hover {
     transition: none;
     transform: none;
   }

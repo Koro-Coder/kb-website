@@ -23,13 +23,18 @@ const COPY = {
     signedOut: 'to report a problem with this solution.',
     requiresComment: true
   },
+  // No form at all: a video request carries no information beyond "this
+  // question, please" — the comment was optional and almost never the point,
+  // so asking for one put a dialog between the reader and a single click.
+  // The button is the whole interaction, and clicking it again withdraws the
+  // request, which is the only way back now that there is no Delete button.
   video_request: {
     idle: '🎬 Request a video solution',
     done: '🎬 Video requested',
-    title: 'Request a video solution',
-    placeholder: 'Optional: anything in particular you find hard here?',
+    doneHint: 'You have requested a video for this question — click to withdraw.',
     signedOut: 'to request a video solution.',
-    requiresComment: false
+    requiresComment: false,
+    instant: true
   }
 };
 
@@ -113,8 +118,10 @@ export default function QuestionActions({ bookId, subject, question, types }) {
     setError('');
   };
 
-  const save = async (type) => {
-    if (COPY[type].requiresComment && !comment.trim()) {
+  // commentText is explicit rather than read from state, so the one-click path
+  // cannot pick up whatever happens to be sitting in the textarea.
+  const save = async (type, commentText = comment) => {
+    if (COPY[type].requiresComment && !commentText.trim()) {
       setError('Please describe the problem.');
       return;
     }
@@ -124,7 +131,7 @@ export default function QuestionActions({ bookId, subject, question, types }) {
       const saved = await submitReport(authFetch, {
         ...refFor({ bookId, subject, question }),
         type,
-        comment: comment.trim() || undefined
+        comment: commentText.trim() || undefined
       });
       setMine((current) => ({ ...(current || {}), [type]: saved }));
       close();
@@ -164,14 +171,23 @@ export default function QuestionActions({ bookId, subject, question, types }) {
           <span key={type} className="action-slot">
             <button
               className={`pill action-btn${filed ? ' is-filed' : ''}`}
-              onClick={() => (openType === type ? close() : open(type))}
+              title={filed ? copy.doneHint : undefined}
+              onClick={() => {
+                if (copy.instant) {
+                  // The click IS the request. Filed already means the reader is
+                  // taking it back.
+                  return filed ? remove(type) : save(type, '');
+                }
+                return openType === type ? close() : open(type);
+              }}
               disabled={busy}
             >
               {filed ? copy.done : copy.idle}
             </button>
             {/* Once filed, the same button reopens the form — where Update and
-                Delete both live — rather than offering a bare "withdraw". */}
-            {filed && (
+                Delete both live — rather than offering a bare "withdraw".
+                Nothing to edit on an instant action, so no link there. */}
+            {filed && !copy.instant && (
               <button className="link small" onClick={() => open(type)} disabled={busy}>
                 Edit
               </button>
@@ -210,6 +226,10 @@ export default function QuestionActions({ bookId, subject, question, types }) {
           {error && <p className="error small">{error}</p>}
         </div>
       )}
+
+      {/* A one-click action has no form to report its failure in, so a failed
+          request would otherwise look like nothing happened at all. */}
+      {!openType && error && <p className="error small">{error}</p>}
     </div>
   );
 }

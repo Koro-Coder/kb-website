@@ -74,6 +74,16 @@ async function ensureAuthIndexes() {
     .collection(COLLECTIONS.users)
     .createIndex({ provider: 1, providerUserId: 1 }, { unique: true });
   await db.collection(COLLECTIONS.users).createIndex({ email: 1 });
+  // Case-insensitive uniqueness for usernames, and the only thing standing
+  // between two simultaneous sign-ups and the same name. Partial, because
+  // accounts created before usernames existed have no such field and a plain
+  // unique index would collide them all on null.
+  await db
+    .collection(COLLECTIONS.users)
+    .createIndex(
+      { usernameLower: 1 },
+      { unique: true, partialFilterExpression: { usernameLower: { $type: 'string' } } }
+    );
   await db.collection(COLLECTIONS.refreshTokens).createIndex({ familyId: 1 });
   // Expired refresh tokens are worthless; let MongoDB reap them rather than
   // growing the collection forever. Requires expiresAt to be a real Date.

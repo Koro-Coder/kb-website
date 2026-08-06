@@ -56,6 +56,8 @@ export default function BookmarksPage() {
   const [bookmarks, setBookmarks] = useState(null);
   const [trees, setTrees] = useState({});
   const [error, setError] = useState('');
+  // null = every subject collapsed, which is the state the page opens in.
+  const [openSubject, setOpenSubject] = useState(null);
 
   useEffect(() => {
     if (!isSignedIn) {
@@ -125,7 +127,7 @@ export default function BookmarksPage() {
         <span className="crumb-sep">/</span>
         <span className="crumb-now">Bookmarks</span>
       </nav>
-      <div className="page-title">
+      <div className="page-title bookmarks-title">
         <h1>Your bookmarks</h1>
         {bookmarks && <span className="page-count">{plural(bookmarks.length, 'question')}</span>}
       </div>
@@ -149,11 +151,43 @@ export default function BookmarksPage() {
         </p>
       )}
 
-      {grouped.map(({ subject, files }) => (
+      {grouped.map(({ subject, files }) => {
+        const open = openSubject === subject;
+        const count = files.reduce((sum, f) => sum + f.items.length, 0);
+        return (
         <section className="bookmark-subject" key={subject}>
-          <h2>{titleCase(subject)}</h2>
+          {/* One subject open at a time, and none on arrival: someone with
+              bookmarks across all three subjects was landing on a wall of
+              chapters, when what they came for is one question in one of them.
+              Clicking the open subject closes it again, so it is always
+              possible to get back to the overview. */}
+          <h2>
+            <button
+              type="button"
+              className="bookmark-subject-head"
+              aria-expanded={open}
+              onClick={() => setOpenSubject(open ? null : subject)}
+            >
+              <svg
+                className="bookmark-chev"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m9 6 6 6-6 6" />
+              </svg>
+              {titleCase(subject)}
+              <span className="bookmark-subject-count">{plural(count, 'question')}</span>
+            </button>
+          </h2>
 
-          {files.map(({ fileKey, placement, items }) => (
+          {open && files.map(({ fileKey, placement, items }) => (
             <div className="bookmark-group" key={fileKey}>
               <div className="bookmark-path">
                 {placement ? (
@@ -190,8 +224,28 @@ export default function BookmarksPage() {
                     return (
                       <li key={bookmark.id}>
                         {href ? <Link to={href}>{title}</Link> : <span>{title}</span>}
-                        <button className="link remove" onClick={() => drop(bookmark.id)}>
-                          Remove
+                        {/* An icon, but never an unlabelled one: the chip
+                            beside it is the only thing saying which question
+                            this removes, and a screen reader reading a row of
+                            bare "×" buttons has nothing to go on. */}
+                        <button
+                          className="link remove"
+                          onClick={() => drop(bookmark.id)}
+                          aria-label={`Remove ${title} from bookmarks`}
+                          title={`Remove ${title} from bookmarks`}
+                        >
+                          <svg
+                            width="11"
+                            height="11"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M6 6l12 12M18 6L6 18" />
+                          </svg>
                         </button>
                       </li>
                     );
@@ -200,7 +254,8 @@ export default function BookmarksPage() {
             </div>
           ))}
         </section>
-      ))}
+        );
+      })}
     </div>
   );
 }

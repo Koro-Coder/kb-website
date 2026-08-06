@@ -36,11 +36,38 @@ function createUserStore() {
       return null;
     },
 
+    async findByUsername(usernameLower) {
+      for (const user of byId.values()) {
+        if (user.usernameLower === usernameLower) {
+          return clone(user);
+        }
+      }
+      return null;
+    },
+
     async create(user) {
       const id = user.id || crypto.randomUUID();
       const record = { ...user, id };
       byId.set(id, record);
       return clone(record);
+    },
+
+    // Mirrors the Mongo store: null both when the name is taken and when this
+    // account already has one. The taken-check stands in for the unique index.
+    async setUsername(id, username, usernameLower, at) {
+      for (const user of byId.values()) {
+        if (user.usernameLower === usernameLower) {
+          return null;
+        }
+      }
+      const user = byId.get(id);
+      if (!user || user.usernameLower) {
+        return null;
+      }
+      user.username = username;
+      user.usernameLower = usernameLower;
+      user.usernameSetAt = at;
+      return clone(user);
     },
 
     async recordLogin(id, at) {

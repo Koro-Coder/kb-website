@@ -87,7 +87,13 @@ function questionIdPrefix(fields) {
 
 module.exports = {
   id: 'aptitude-session',
-  argMap: ['subjectCode', 'year', 'questionNum', 'session', 'answer', 'content'],
+  // The 4th argument is marks, exactly as it is for every other subject — it
+  // was named 'session' here on the assumption that Aptitude substituted its
+  // session for the marks slot. It does not: within a single Session 1 file,
+  // 2013 Q1-5 carry 1 and Q6-10 carry 2, which is GATE's 1-mark/2-mark split,
+  // not a session number (that would be constant for the whole file). The
+  // session comes from the FILENAME, in discoverHierarchy above.
+  argMap: ['subjectCode', 'year', 'questionNum', 'marks', 'answer', 'content'],
   // Aptitude drops the documented leading {chapter} argument — it has
   // sessions, not chapters — so its solution macros take 7 arguments.
   solutionArgMap: ['year', 'questionNum', 'marks', 'answer', 'difficulty', 'video', 'content'],

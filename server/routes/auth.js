@@ -2,6 +2,7 @@ const express = require('express');
 const { createVerifier, challengeFor, createState } = require('../auth/pkce');
 const { decodeIdToken, validateIdTokenClaims } = require('../auth/providers');
 const { AuthError } = require('../auth/errors');
+const { validateUsername, usernameKey, suggestUsername } = require('../auth/usernames');
 
 // Cookie carrying the in-flight OAuth transaction (state + PKCE verifier).
 const OAUTH_COOKIE = 'pf_oauth';
@@ -45,10 +46,16 @@ function createAuthRouter({ stores, config, tokens, refreshService, requireAuth,
       email: user.email,
       name: user.name,
       avatarUrl: user.avatarUrl || null,
+      // null is meaningful to the client, not merely absent: it is what makes
+      // the app show the "choose a username" step. Accounts that existed
+      // before usernames did land here too, and are asked on next sign-in.
+      username: user.username || null,
       roles: user.roles || ['user'],
       createdAt: user.createdAt
     };
   }
+
+  const isUsernameTaken = async (key) => Boolean(await stores.users.findByUsername(key));
 
   function issueSession(res, user) {
     return refreshService.issue(user.id).then(({ token }) => {
@@ -256,6 +263,72 @@ function createAuthRouter({ stores, config, tokens, refreshService, requireAuth,
       return;
     }
     res.json(publicUser(user));
+  });
+
+  // --- Usernames ----------------------------------------------------------
+  // Chosen once, on first sign-in, and permanent afterwards. The suggestion is
+  // only a starting point for the box; nothing is reserved until it is saved.
+
+  router.get('/username/suggestion', requireAuth, async (req, res) => {
+    const user = await stores.users.findById(req.user.id);
+    if (!user) {
+      res.status(401).json({ error: 'Session is no longer valid', code: 'unknown_user' });
+      return;
+    }
+    if (user.username) {
+      res.json({ suggestion: user.username, alreadySet: true });
+      return;
+    }
+    res.json({ suggestion: await suggestUsername(user, isUsernameTaken), alreadySet: false });
+  });
+
+  // Availability as you type. Explicitly advisory: a free answer here does not
+  // hold the name, so the POST below re-checks and can still refuse.
+  router.get('/username/available', requireAuth, async (req, res) => {
+    const check = validateUsername(req.query.username);
+    if (!check.ok) {
+      res.json({ available: false, error: check.error });
+      return;
+    }
+    const taken = await isUsernameTaken(usernameKey(check.username));
+    res.json({ available: !taken, error: taken ? 'That username is taken.' : null });
+  });
+
+  router.post('/username', requireAuth, async (req, res) => {
+    const check = validateUsername(req.body ? req.body.username : null);
+    if (!check.ok) {
+      res.status(400).json({ error: check.error, code: 'invalid_username' });
+      return;
+    }
+
+    const existing = await stores.users.findById(req.user.id);
+    if (!existing) {
+      res.status(401).json({ error: 'Session is no longer valid', code: 'unknown_user' });
+      return;
+    }
+    // Answered before attempting the write so this reads as "you already have
+    // one" rather than as a collision with yourself.
+    if (existing.username) {
+      res.status(409).json({
+        error: 'Your username is already set and cannot be changed.',
+        code: 'username_already_set',
+        username: existing.username
+      });
+      return;
+    }
+
+    const updated = await stores.users.setUsername(
+      req.user.id,
+      check.username,
+      usernameKey(check.username),
+      new Date(now()).toISOString()
+    );
+    if (!updated) {
+      res.status(409).json({ error: 'That username is taken.', code: 'username_taken' });
+      return;
+    }
+
+    res.status(201).json(publicUser(updated));
   });
 
   return router;

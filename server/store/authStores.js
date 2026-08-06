@@ -32,12 +32,43 @@ function createUserStore() {
       return toUser(await users.findOne({ email }));
     },
 
+    async findByUsername(usernameLower) {
+      const users = await collection(COLLECTIONS.users);
+      return toUser(await users.findOne({ usernameLower }));
+    },
+
     async create(user) {
       const users = await collection(COLLECTIONS.users);
       const { id, ...fields } = user;
       const _id = id || crypto.randomUUID();
       await users.insertOne({ _id, ...fields });
       return { id: _id, ...fields };
+    },
+
+    // Claims a username for a user who has none. Returns the updated user, or
+    // null for either way this can fail — the name is taken, or this account
+    // already has one (usernames are permanent).
+    //
+    // The filter, not a read-then-write, is what makes "already has one" safe
+    // under a double-submit: the second update matches nothing. Uniqueness is
+    // enforced by the unique index on usernameLower rather than by checking
+    // first, because between a check and a write another request can claim the
+    // same name — the duplicate-key error is the only answer that cannot race.
+    async setUsername(id, username, usernameLower, at) {
+      const users = await collection(COLLECTIONS.users);
+      try {
+        const doc = await users.findOneAndUpdate(
+          { _id: id, usernameLower: { $in: [null, undefined] } },
+          { $set: { username, usernameLower, usernameSetAt: at } },
+          { returnDocument: 'after' }
+        );
+        return toUser(doc && doc.value !== undefined ? doc.value : doc);
+      } catch (error) {
+        if (error && error.code === 11000) {
+          return null;
+        }
+        throw error;
+      }
     },
 
     async recordLogin(id, at) {

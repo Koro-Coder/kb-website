@@ -143,7 +143,6 @@ router.get('/books/:bookId/question', async (req, res) => {
       year: question.year,
       answer: question.answer,
       marks: question.marks,
-      session: question.session,
       commonData: question.commonData,
       body: question.body,
       options: question.options

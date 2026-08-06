@@ -1,4 +1,5 @@
 import MathSpan from './MathSpan.jsx';
+import Brand from './Brand.jsx';
 import BookmarkButton from './BookmarkButton.jsx';
 import QuestionActions from './QuestionActions.jsx';
 import RateQuestion from './RateQuestion.jsx';
@@ -111,7 +112,12 @@ const OPTION_LABELS = 'ABCDEFGH';
 function renderBodyNodes(body, bookId, keyPrefix, urlFor = assetUrl) {
   return (body || []).map((node, idx) => {
     if (node.type === 'text') {
-      return <span key={`${keyPrefix}${idx}`}>{renderInlineText(node.value, `${keyPrefix}${idx}`)} </span>;
+      // No trailing space here any more. It used to paper over the tokenizer
+      // trimming every text node — it restored the space AFTER a text run but
+      // could not restore the one before it, so "$M_1$ and" still ran together.
+      // The tokenizer now preserves both, and adding one here would insert a
+      // space the source never had.
+      return <span key={`${keyPrefix}${idx}`}>{renderInlineText(node.value, `${keyPrefix}${idx}`)}</span>;
     }
     if (node.type === 'math') {
       return <MathSpan key={`${keyPrefix}${idx}`} expr={node.value} display={node.display} />;
@@ -196,7 +202,16 @@ export default function QuestionViewer({ bookId, subject, question }) {
         {question.questionId && <strong>Q{question.questionId}</strong>}
         <strong>{question.questionType}</strong>
         <span>{question.year}</span>
-        {question.marks && !question.starred && <span>{question.marks} Mark(s)</span>}
+        {/* Marks is the 4th macro argument. Number(), not truthiness: it
+            arrives as a string, so a "0" would otherwise print as "0 Marks".
+            Starred (practice) questions write 0 there by convention and carry
+            no marks at all — the !starred guard states that intent, and the
+            > 0 test is what actually holds if one is ever written unstarred. */}
+        {!question.starred && Number(question.marks) > 0 && (
+          <span>
+            {question.marks} {Number(question.marks) === 1 ? 'Mark' : 'Marks'}
+          </span>
+        )}
         <span className="question-meta-spacer" />
         <BookmarkButton bookId={bookId} subject={subject} question={question} />
       </div>
@@ -211,6 +226,17 @@ export default function QuestionViewer({ bookId, subject, question }) {
       )}
 
       <div className="question-body">{renderBodyNodes(question.body, bookId, 'b')}</div>
+
+      {/* A quiet mark between the question and its options. A screenshot of a
+          single question travels a lot further than the page it was taken
+          from, and this is the only thing inside that crop saying where it
+          came from. Rendered for every question, not just MCQs — a NAT
+          question is just as screenshottable, it simply has no options for
+          this to sit above. aria-hidden because it is decoration: the header
+          already names the site to anyone reading the page itself. */}
+      <div className="question-watermark" aria-hidden="true">
+        <Brand />
+      </div>
 
       {question.options && question.options.length > 0 && (
         <div className="options">
@@ -249,10 +275,11 @@ export default function QuestionViewer({ bookId, subject, question }) {
         />
       )}
 
-      {/* Requesting a video only makes sense when there isn't one already.
-          Nothing renders here when there is, since the question report has
-          moved up to sit under the question itself. */}
-      {!(question.solution && question.solution.video) && (
+      {/* The video request now lives inside the solution section — but a
+          question with no solution at all has no such section to put it in,
+          and those are exactly the ones most worth asking about, so it stays
+          out here in that one case. */}
+      {!question.solution && (
         <QuestionActions
           bookId={bookId}
           subject={subject}
@@ -343,12 +370,15 @@ function SolutionSection({ bookId, subject, question, solution }) {
       <div className="solution-body">{renderBodyNodes(solution.body, bookId, 'sol', solutionAssetUrl)}</div>
 
       {/* Sits inside the collapsed solution: you can only report a problem
-          with a solution you have actually opened and read. */}
+          with a solution you have actually opened and read — and asking for a
+          video is the same judgement, made at the same moment ("I have read
+          this and still want it explained"). Requesting one is only offered
+          when there isn't a video already. */}
       <QuestionActions
         bookId={bookId}
         subject={subject}
         question={question}
-        types={['solution_issue']}
+        types={solution.video ? ['solution_issue'] : ['solution_issue', 'video_request']}
       />
     </details>
   );

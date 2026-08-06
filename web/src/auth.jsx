@@ -106,9 +106,24 @@ export function AuthProvider({ children }) {
     [refresh]
   );
 
+  // Folded into the session rather than fetched separately: the signed-in user
+  // already carries its username (null when unchosen), so the gate can decide
+  // on the first render instead of flashing the app and then covering it.
+  const applyUser = useCallback((updated) => setUser(updated), []);
+
   const value = useMemo(
-    () => ({ user, status, isSignedIn: status === 'signed-in', signIn, signOut, authFetch, refresh }),
-    [user, status, signIn, signOut, authFetch, refresh]
+    () => ({
+      user,
+      status,
+      isSignedIn: status === 'signed-in',
+      needsUsername: status === 'signed-in' && Boolean(user) && !user.username,
+      applyUser,
+      signIn,
+      signOut,
+      authFetch,
+      refresh
+    }),
+    [user, status, applyUser, signIn, signOut, authFetch, refresh]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

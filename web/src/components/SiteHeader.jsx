@@ -257,6 +257,10 @@ function AccountMenu({ user, signOut }) {
         >
           <div className="acct-who">
             <strong>{user.name}</strong>
+            {/* The username sits above the address because it is the name
+                other people will see, and it is the one thing here the account
+                holder chose themselves. */}
+            {user.username && <span className="acct-username">@{user.username}</span>}
             <span>{user.email}</span>
           </div>
           <button
@@ -347,12 +351,12 @@ export default function SiteHeader() {
           {/* The PDF library is a separate site (pyq.prepfusion.in/pdf/) that
               hands you whole books. This app is the Study Hub: the same
               catalogue, but opened question by question. */}
-          <a
-            href="https://pyq.prepfusion.in/pdf/"
-            title="Every previous-year paper as a downloadable PDF."
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          {/* Same tab, unlike Courses and YouTube: the library is the other
+              half of the same catalogue, so going there is moving around
+              PrepFusion rather than leaving it, and Back returns you to the
+              question you were reading. The ↗ stays because it marks an
+              external destination, which this still is. */}
+          <a href="https://pyq.prepfusion.in/pdf/" title="Every previous-year paper as a downloadable PDF.">
             <Icon path={BOOK_ICON} />
             Library
             <span className="ext" aria-hidden="true">

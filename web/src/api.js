@@ -61,6 +61,25 @@ export async function removeBookmark(authFetch, id) {
 
 // --- Reports (question problems, solution problems, video requests) --------
 
+// --- Username --------------------------------------------------------------
+// Chosen once, at first sign-in, and permanent afterwards.
+
+export async function getUsernameSuggestion(authFetch) {
+  return handle(await authFetch('/api/auth/username/suggestion'));
+}
+
+// Advisory only — the server checks again when the name is actually claimed,
+// because between this answer and that write someone else can take it.
+export async function checkUsername(authFetch, username) {
+  return handle(await authFetch(`/api/auth/username/available?username=${encodeURIComponent(username)}`));
+}
+
+export async function chooseUsername(authFetch, username) {
+  return handle(
+    await authFetch('/api/auth/username', { method: 'POST', body: JSON.stringify({ username }) })
+  );
+}
+
 export async function listMyReports(authFetch) {
   return handle(await authFetch('/api/reports/mine'));
 }

@@ -857,18 +857,30 @@ function parseInlineContent(content, context, resolveImagePath) {
     i += 1;
   }
 
-  const normalizedBody = [];
-  for (const node of body) {
-    if (node.type === 'text') {
-      const value = collapseWhitespace(node.value);
-      if (value) {
-        normalizedBody.push({ type: 'text', value });
-      }
-    } else {
-      normalizedBody.push(node);
-    }
+  // Runs of whitespace inside a text node collapse to a single space, but the
+  // node is NOT trimmed. In "The transistors $M_1$ and $M_2$ are biased" the
+  // space that separates the maths from "and" belongs to the START of the
+  // text node following it — trimming every node deleted it and printed
+  // "M₁and". For the same reason a node that is nothing but the space between
+  // two adjacent maths spans has to survive as a single space.
+  //
+  // Only the two outer edges of the body are trimmed, which is what that trim
+  // was actually there for: no leading or trailing space around the question.
+  const normalizedBody = body.map((node) =>
+    node.type === 'text' ? { ...node, value: node.value.replace(/\s+/g, ' ') } : node
+  );
+  const first = normalizedBody[0];
+  if (first && first.type === 'text') {
+    first.value = first.value.replace(/^ /, '');
   }
-  return { body: normalizedBody, options };
+  const last = normalizedBody[normalizedBody.length - 1];
+  if (last && last.type === 'text') {
+    last.value = last.value.replace(/ $/, '');
+  }
+  return {
+    body: normalizedBody.filter((node) => node.type !== 'text' || node.value !== ''),
+    options
+  };
 }
 
 // Solution macros, per the PrepFusion Solutions Manual. The documented spine
